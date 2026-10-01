@@ -2,7 +2,15 @@
 
 **Blindbox S2 Daily Monitor** (`dashboard.html`): a daily trend dashboard for Allo Bank Gamification Season 2.
 
-Published page: https://claude.ai/artifact/7nEA3yq2g9Ls3Y8MapzuLf
+- Web (GitHub Pages): https://ghazylilhaq.github.io/gamification-dashboard/
+- claude.ai page (private, shares the latest upload with the team): https://claude.ai/artifact/7nEA3yq2g9Ls3Y8MapzuLf
+
+## Deploying
+
+`index.html` is built from `dashboard.html`. After editing `dashboard.html`, run `./scripts/build.sh` and commit both files.
+GitHub Pages serves `index.html` from the root of `main` (Settings › Pages › Deploy from a branch › `main` / `/ (root)`).
+
+On GitHub Pages each person loads their own export: the file is processed in their browser and the result is kept only in that browser. Nothing is uploaded to GitHub. The shared team view only works on the claude.ai page.
 
 ## Daily routine
 
