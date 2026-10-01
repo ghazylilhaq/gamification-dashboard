@@ -1,0 +1,715 @@
+<title>Blindbox S2 Daily Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: ops console. Summary strip (status + KPIs + alerts) on top, then one section per question:
+   activity → stamp progression → boxes → rewards & stock → delivery health. */
+:root {
+  --bg: #f6f7f8;
+  --surface: #ffffff;
+  --surface-2: #eef1f3;
+  --fg: #12161a;
+  --fg-2: #4b5560;
+  --muted: #7f8992;
+  --line: #dfe3e7;
+  --axis: #c3c9cf;
+  --accent: #1f6fcf;
+  --accent-ink: #ffffff;
+  --s1: #2a78d6; --s2: #eb6834;
+  --good: #0ca30c; --good-ink: #006300;
+  --warn: #fab219; --warn-ink: #8a5a00;
+  --serious: #ec835a; --crit: #d03b3b; --crit-ink: #b42323;
+  --h0: #eef3f9; --h1: #cde2fb; --h2: #9ec5f4; --h3: #6da7ec; --h4: #3987e5; --h5: #256abf; --h6: #184f95; --h7: #0d366b;
+  --font-display: "Bricolage Grotesque", "IBM Plex Sans", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1215; --surface: #171b1f; --surface-2: #20252a; --fg: #f1f3f5; --fg-2: #b9c1c8; --muted: #8a939b;
+    --line: #2a3036; --axis: #3a4148; --accent: #4f95ea; --accent-ink: #0b1420;
+    --s1: #3987e5; --s2: #d95926;
+    --good-ink: #2fc22f; --warn-ink: #fab219; --crit-ink: #ef6b6b;
+    --h0: #1b2129; --h1: #12294a; --h2: #104281; --h3: #1c5cab; --h4: #2a78d6; --h5: #5598e7; --h6: #86b6ef; --h7: #cde2fb;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1215; --surface: #171b1f; --surface-2: #20252a; --fg: #f1f3f5; --fg-2: #b9c1c8; --muted: #8a939b;
+  --line: #2a3036; --axis: #3a4148; --accent: #4f95ea; --accent-ink: #0b1420;
+  --s1: #3987e5; --s2: #d95926;
+  --good-ink: #2fc22f; --warn-ink: #fab219; --crit-ink: #ef6b6b;
+  --h0: #1b2129; --h1: #12294a; --h2: #104281; --h3: #1c5cab; --h4: #2a78d6; --h5: #5598e7; --h6: #86b6ef; --h7: #cde2fb;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 14px; line-height: 1.45; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 56px; display: grid; gap: 28px; }
+h1, h2 { font-family: var(--font-display); text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+h1 { font-size: 26px; font-weight: 700; }
+h2 { font-size: 18px; font-weight: 600; }
+h3 { font-size: 13px; font-weight: 600; margin: 0; color: var(--fg-2); }
+p { margin: 0; }
+.num, td.n, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+.muted { color: var(--muted); }
+.small { font-size: 12px; }
+
+/* header */
+header.top { display: flex; flex-wrap: wrap; gap: 16px 24px; align-items: flex-end; justify-content: space-between; }
+.title-block { display: grid; gap: 6px; min-width: 0; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; font-size: 13px; color: var(--fg-2); }
+.controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.seg { display: inline-flex; background: var(--surface-2); border-radius: 8px; padding: 3px; gap: 2px; }
+.seg button { border: 0; background: transparent; color: var(--fg-2); font: 500 13px var(--font-body); padding: 5px 10px; border-radius: 6px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--fg); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+select, .btn { font: 500 13px var(--font-body); color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; }
+.btn { cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+button:focus-visible, select:focus-visible, .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--fg-2); white-space: nowrap; }
+.chip .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.chip.good { color: var(--good-ink); } .chip.warn { color: var(--warn-ink); } .chip.crit { color: var(--crit-ink); } .chip.info { color: var(--accent); }
+
+.banner { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; padding: 12px 14px; border-radius: 10px; background: var(--surface-2); color: var(--fg-2); font-size: 13px; }
+.banner strong { color: var(--fg); }
+.drop-hint { border: 1.5px dashed var(--axis); }
+body.dragging .drop-hint { border-color: var(--accent); }
+
+/* KPIs */
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); gap: 12px; }
+.kpi { background: var(--surface); border-radius: 10px; padding: 14px 14px 10px; display: grid; gap: 4px; min-width: 0; }
+.kpi .label { font-size: 12px; color: var(--fg-2); font-weight: 500; }
+.kpi .value { font-family: var(--font-display); font-size: 28px; font-weight: 600; line-height: 1.1; }
+.kpi .deltas { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; color: var(--muted); }
+.up { color: var(--good-ink); } .down { color: var(--crit-ink); } .flat { color: var(--muted); }
+.kpi svg { width: 100%; height: 30px; display: block; margin-top: 4px; }
+
+/* alerts */
+.alerts { display: grid; gap: 8px; }
+.alert { display: grid; grid-template-columns: 4px 1fr; gap: 12px; background: var(--surface); border-radius: 8px; padding: 10px 12px 10px 0; overflow: hidden; }
+.alert .stripe { border-radius: 0 3px 3px 0; }
+.alert.crit .stripe { background: var(--crit); } .alert.warn .stripe { background: var(--warn); } .alert.info .stripe { background: var(--accent); } .alert.good .stripe { background: var(--good); }
+.alert .msg { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; min-width: 0; }
+.alert .msg b { font-weight: 600; }
+
+/* sections */
+section { display: grid; gap: 14px; }
+.sec-head { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; justify-content: space-between; }
+.sec-head p { color: var(--fg-2); font-size: 13px; max-width: 70ch; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); gap: 14px; }
+.panel { background: var(--surface); border-radius: 10px; padding: 14px; display: grid; gap: 10px; min-width: 0; align-content: start; }
+.panel-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; align-items: baseline; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--fg-2); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.legend i.line { height: 2px; border-radius: 1px; vertical-align: 3px; width: 14px; }
+.chart { width: 100%; min-height: 200px; position: relative; }
+.chart svg { display: block; overflow: visible; }
+.heat { overflow-x: auto; }
+
+/* tables */
+.tbl-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th { text-align: left; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); padding: 6px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+th.n, td.n { text-align: right; white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td .sub { display: block; font-size: 11px; color: var(--muted); }
+td svg.spark { width: 96px; height: 22px; display: block; }
+.bar-cell { display: flex; align-items: center; gap: 8px; min-width: 120px; }
+.bar-cell .track { flex: 1; height: 8px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+.bar-cell .fill { height: 100%; background: var(--s1); border-radius: 0 4px 4px 0; }
+
+.tip { position: fixed; z-index: 10; pointer-events: none; background: var(--fg); color: var(--bg); font-size: 12px; padding: 8px 10px; border-radius: 6px; max-width: 260px; box-shadow: 0 4px 14px rgba(0,0,0,.18); }
+.tip .t { font-weight: 600; margin-bottom: 3px; }
+.tip .r { display: flex; justify-content: space-between; gap: 14px; font-family: var(--font-mono); }
+.tip .r span:first-child { font-family: var(--font-body); }
+.tip i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
+
+details.defs { background: var(--surface); border-radius: 10px; padding: 12px 14px; }
+details.defs summary { cursor: pointer; font-weight: 600; }
+details.defs dl { display: grid; grid-template-columns: minmax(140px, 220px) 1fr; gap: 8px 16px; margin: 12px 0 0; font-size: 13px; }
+details.defs dt { font-weight: 600; }
+details.defs dd { margin: 0; color: var(--fg-2); max-width: 70ch; }
+@media (max-width: 560px) { details.defs dl { grid-template-columns: 1fr; } details.defs dd { margin-bottom: 6px; } .kpi .value { font-size: 24px; } }
+.loading { opacity: .5; pointer-events: none; }
+@media (prefers-reduced-motion: no-preference) { .kpi, .panel { transition: opacity .2s; } }
+</style>
+
+<div class="wrap" id="app">
+  <header class="top">
+    <div class="title-block">
+      <span class="eyebrow">Gamification Season 2 · daily trend monitor</span>
+      <h1>Blindbox S2 Daily Monitor</h1>
+      <div class="source" id="source"></div>
+    </div>
+    <div class="controls">
+      <label class="small muted" for="focus">Report day</label>
+      <select id="focus" aria-label="Report day"></select>
+      <div class="seg" role="group" aria-label="Chart range" id="range">
+        <button type="button" data-r="14" aria-pressed="false">14d</button>
+        <button type="button" data-r="30" aria-pressed="true">30d</button>
+        <button type="button" data-r="0" aria-pressed="false">All</button>
+      </div>
+      <label class="btn primary" for="file">Load today's export</label>
+      <input type="file" id="file" accept=".xlsx,.xls,.csv" multiple hidden>
+    </div>
+  </header>
+
+  <div class="banner drop-hint" id="banner"></div>
+
+  <div class="kpis" id="kpis"></div>
+  <div class="alerts" id="alerts" aria-live="polite"></div>
+
+  <section>
+    <div class="sec-head"><h2>Claims and users</h2><p>Box opens per day and the people behind them. New users opened their first box that day.</p></div>
+    <div class="grid2">
+      <div class="panel">
+        <div class="panel-head"><h3>Box claims per day</h3><div class="legend"><span><i style="background:var(--s1)"></i>Claims</span><span><i class="line" style="background:var(--fg)"></i>7-day average</span></div></div>
+        <div class="chart" id="ch-claims"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Claiming users per day</h3><div class="legend"><span><i style="background:var(--s1)"></i>Returning</span><span><i style="background:var(--s2)"></i>New</span></div></div>
+        <div class="chart" id="ch-users"></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Stamp progression</h2><p>Users segmented by the stamp milestone they have reached, counted when they open that milestone's box. Darker cells mean more users crossed that milestone that day.</p></div>
+    <div class="panel">
+      <div class="panel-head"><h3>Users reaching each milestone, per day</h3><span class="small muted" id="heat-note"></span></div>
+      <div class="heat" id="ch-heat"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h3>Milestone funnel</h3><span class="small muted">Conversion is the share of users at the previous milestone who reached this one</span></div>
+      <div class="tbl-wrap"><table id="tbl-tiers"></table></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Boxes</h2><p>Opens per blindbox on the report day against its 7-day average.</p></div>
+    <div class="panel"><div class="tbl-wrap"><table id="tbl-boxes"></table></div></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Rewards and stock</h2><p>Days of cover is remaining stock divided by the average daily payout over the last 7 days. Rewards that run out first are at the top.</p></div>
+    <div class="grid2">
+      <div class="panel">
+        <div class="panel-head"><h3>Cashback paid per day (Rp)</h3><div class="legend"><span><i style="background:var(--s1)"></i>Cashback</span></div></div>
+        <div class="chart" id="ch-cash"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Coupons won per day</h3><div class="legend"><span><i style="background:var(--s1)"></i>Coupons</span></div></div>
+        <div class="chart" id="ch-coupons"></div>
+      </div>
+    </div>
+    <div class="panel"><div class="tbl-wrap"><table id="tbl-stock"></table></div></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Delivery health</h2><p>Failed claims, coupons that were won but not yet in the coupon report, and manual coupon injections.</p></div>
+    <div class="grid2">
+      <div class="panel">
+        <div class="panel-head"><h3>Failed claims per day</h3><div class="legend"><span><i style="background:var(--crit)"></i>Failed</span></div></div>
+        <div class="chart" id="ch-failed"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Coupon delivery, last 7 days</h3></div>
+        <div class="tbl-wrap"><table id="tbl-delivery"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <details class="defs">
+    <summary>How each number is calculated</summary>
+    <dl>
+      <dt>Source</dt><dd>The "Blindbox History Report S2" spreadsheet. Download it with File › Download › Microsoft Excel (.xlsx) and load it here. A CSV of the "BlindBox History Report" tab also works, with fewer sections.</dd>
+      <dt>Box claims</dt><dd>Rows in the BlindBox History Report tab, deduplicated by reference_no and dated by created_time. All statuses count as a claim.</dd>
+      <dt>Failure rate</dt><dd>Claims with status FAILED divided by all claims that day.</dd>
+      <dt>Claiming users</dt><dd>Distinct customer_id with at least one claim that day. New users opened their first box that day; everyone else is returning.</dd>
+      <dt>Total participants</dt><dd>Distinct customer_id with any claim up to and including the report day.</dd>
+      <dt>Milestone reached</dt><dd>The first day a customer opened the box tied to a stamp milestone (stamp_milestone_at_open). Users who reached a milestone but have not opened its box are not visible in this export.</dd>
+      <dt>Highest milestone</dt><dd>Each user is placed in one segment: the highest milestone box they have opened by the report day.</dd>
+      <dt>Cashback paid</dt><dd>Sum of cashback_amount on successful CASHBACK claims.</dd>
+      <dt>Days of cover</dt><dd>Remaining Reward from the Stock Monitoring tab divided by the average successful payouts of that reward over the 7 days before the report day.</dd>
+      <dt>Coupon gap</dt><dd>Successful COUPON claims minus rows in Coupon Receive Report with a blindbox act_id (B13, B14…), by transaction day. Manual injections are rows from the Manual Inject tab.</dd>
+      <dt>Partial day</dt><dd>If the newest day in the file ends before 23:00, it is marked partial and the report day defaults to the day before.</dd>
+      <dt>Alert thresholds</dt><dd>Failure rate above 2% (warning) or 5% (critical); claims more than 30% below the 7-day average; any reward with under 14 days (warning) or 7 days (critical) of cover; coupon gap above 5% of coupons won.</dd>
+    </dl>
+  </details>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+"use strict";
+/* ---------- helpers ---------- */
+const $ = (s, el = document) => el.querySelector(s);
+const p2 = n => String(n).padStart(2, "0");
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const normKey = k => String(k).toLowerCase().trim().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+const num = v => { if (v == null || v === "") return 0; if (typeof v === "number") return v; const n = parseFloat(String(v).replace(/[^0-9.\-]/g, "")); return isFinite(n) ? n : 0; };
+const fmtN = n => n == null || !isFinite(n) ? "–" : Math.round(n).toLocaleString("en-US");
+const fmtRp = n => { if (n == null || !isFinite(n)) return "–"; const a = Math.abs(n); if (a >= 1e9) return "Rp" + (n / 1e9).toFixed(2) + "B"; if (a >= 1e6) return "Rp" + (n / 1e6).toFixed(2) + "M"; if (a >= 1e4) return "Rp" + (n / 1e3).toFixed(1) + "K"; return "Rp" + Math.round(n).toLocaleString("en-US"); };
+const fmtPct = (n, d = 1) => n == null || !isFinite(n) ? "–" : (n * 100).toFixed(d) + "%";
+const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const dObj = d => new Date(d + "T00:00:00Z");
+const fmtDay = d => { const x = dObj(d); return x.getUTCDate() + " " + MON[x.getUTCMonth()]; };
+const fmtDayLong = d => { const x = dObj(d); return DOW[x.getUTCDay()] + " " + x.getUTCDate() + " " + MON[x.getUTCMonth()] + " " + x.getUTCFullYear(); };
+const addDays = (d, n) => { const x = dObj(d); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
+
+function parseDT(v) {
+  if (v == null || v === "") return null;
+  if (v instanceof Date && !isNaN(v)) return { d: v.getFullYear() + "-" + p2(v.getMonth() + 1) + "-" + p2(v.getDate()), m: v.getHours() * 60 + v.getMinutes() };
+  if (typeof v === "number" && v > 20000 && v < 80000) { // Excel serial
+    const ms = Math.round((v - 25569) * 864e5); const x = new Date(ms);
+    return { d: x.toISOString().slice(0, 10), m: x.getUTCHours() * 60 + x.getUTCMinutes() };
+  }
+  const s = String(v).trim();
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{2}))?/);
+  if (m) return { d: m[1] + "-" + p2(m[2]) + "-" + p2(m[3]), m: m[4] != null ? +m[4] * 60 + +m[5] : null };
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/);
+  if (m) { let mo = +m[1], da = +m[2]; if (mo > 12) [mo, da] = [da, mo]; return { d: m[3] + "-" + p2(mo) + "-" + p2(da), m: m[4] != null ? +m[4] * 60 + +m[5] : null }; }
+  if (/^\d+(\.\d+)?$/.test(s)) return parseDT(+s);
+  return null;
+}
+
+/* ---------- table detection ---------- */
+function classify(rows, name) {
+  if (!rows.length) return null;
+  const keys = new Set(Object.keys(rows[0]));
+  const n = (name || "").toLowerCase();
+  if (keys.has("blind_box_id") && keys.has("created_time")) return "history";
+  if (keys.has("reward_id") && (keys.has("remaining_reward") || keys.has("quota"))) return "stock";
+  if (keys.has("coupon_code") && (keys.has("recv_date") || keys.has("trans_time"))) return n.includes("inject") ? "inject" : "coupons";
+  return null;
+}
+function sheetRows(ws) {
+  const raw = XLSX.utils.sheet_to_json(ws, { defval: "", raw: true });
+  return raw.map(r => { const o = {}; for (const k in r) { const nk = normKey(k); if (nk && !(nk in o)) o[nk] = r[k]; } return o; });
+}
+
+/* ---------- aggregation (no customer-level data leaves this function) ---------- */
+function aggregate(t, sourceName) {
+  const hist = t.history || [];
+  const seen = new Set();
+  const dayMap = new Map(); // day -> bucket
+  const userFirst = new Map(), userMax = new Map(), userMsFirst = new Map();
+  const boxes = new Map(), rewardDaily = new Map(), rewardMeta = new Map(), statusOther = {};
+  let maxDay = null, minDay = null, lastMinute = 0;
+  const B = d => { let b = dayMap.get(d); if (!b) { b = { claims: 0, success: 0, failed: 0, other: 0, users: new Set(), cash: 0, coupons: 0, byBox: {}, entries: {} }; dayMap.set(d, b); } return b; };
+  for (const r of hist) {
+    const key = r.reference_no ? String(r.reference_no) : JSON.stringify(r);
+    if (seen.has(key)) continue; seen.add(key);
+    const dt = parseDT(r.created_time); if (!dt) continue;
+    const d = dt.d, cid = String(r.customer_id || "").trim(); if (!cid) continue;
+    if (!maxDay || d > maxDay) { maxDay = d; lastMinute = dt.m ?? 0; } else if (d === maxDay && (dt.m ?? 0) > lastMinute) lastMinute = dt.m;
+    if (!minDay || d < minDay) minDay = d;
+    const b = B(d), st = String(r.status || "").toUpperCase().trim();
+    b.claims++; b.users.add(cid);
+    if (st === "SUCCESS") b.success++; else if (st === "FAILED") b.failed++; else { b.other++; statusOther[st || "BLANK"] = (statusOther[st || "BLANK"] || 0) + 1; }
+    const box = String(r.blind_box_id || "?").trim(), ms = num(r.stamp_milestone_at_open);
+    if (!boxes.has(box)) boxes.set(box, { id: box, name: String(r.blind_box_name || box).trim(), ms });
+    b.byBox[box] = (b.byBox[box] || 0) + 1;
+    const rt = String(r.reward_type || "").toUpperCase();
+    if (st === "SUCCESS") {
+      if (rt === "CASHBACK") b.cash += num(r.cashback_amount);
+      if (rt === "COUPON") b.coupons++;
+      const rid = String(r.blind_box_reward_id || "").trim();
+      if (rid) {
+        let m = rewardDaily.get(rid); if (!m) { m = {}; rewardDaily.set(rid, m); }
+        m[d] = (m[d] || 0) + 1;
+        if (!rewardMeta.has(rid)) rewardMeta.set(rid, { box, type: rt, name: String(r.reward_coupon_name || "").trim() });
+      }
+    }
+    const f = userFirst.get(cid); if (!f || d < f) userFirst.set(cid, d);
+    const mk = cid + "|" + box, mf = userMsFirst.get(mk); if (!mf || d < mf) userMsFirst.set(mk, d);
+  }
+  if (!maxDay) throw new Error("No claim rows with a readable created_time were found.");
+  const days = []; for (let d = minDay; d <= maxDay; d = addDays(d, 1)) days.push(d);
+  const idx = new Map(days.map((d, i) => [d, i]));
+  const z = () => days.map(() => 0);
+  const A = { claims: z(), success: z(), failed: z(), other: z(), users: z(), newUsers: z(), cash: z(), coupons: z() };
+  days.forEach((d, i) => { const b = dayMap.get(d); if (!b) return; A.claims[i] = b.claims; A.success[i] = b.success; A.failed[i] = b.failed; A.other[i] = b.other; A.users[i] = b.users.size; A.cash[i] = b.cash; A.coupons[i] = b.coupons; });
+  for (const d of userFirst.values()) A.newUsers[idx.get(d)]++;
+  const boxList = [...boxes.values()].sort((a, b) => a.ms - b.ms || a.id.localeCompare(b.id));
+  const bi = new Map(boxList.map((b, i) => [b.id, i]));
+  boxList.forEach(b => { b.opens = z(); b.entries = z(); });
+  days.forEach((d, i) => { const bk = dayMap.get(d); if (!bk) return; for (const k in bk.byBox) boxList[bi.get(k)].opens[i] = bk.byBox[k]; });
+  // milestone entries + per-user highest-milestone transitions (as daily deltas per segment)
+  const userBoxes = new Map();
+  for (const [mk, d] of userMsFirst) { const [cid, box] = mk.split("|"); boxList[bi.get(box)].entries[idx.get(d)]++; let a = userBoxes.get(cid); if (!a) { a = []; userBoxes.set(cid, a); } a.push([d, bi.get(box)]); }
+  const segDelta = boxList.map(() => z()); // +1 when a user enters a segment, -1 when they leave it
+  for (const a of userBoxes.values()) {
+    a.sort((x, y) => x[0] < y[0] ? -1 : x[0] > y[0] ? 1 : x[1] - y[1]);
+    let cur = -1;
+    for (const [d, b] of a) { if (b > cur) { const i = idx.get(d); if (cur >= 0) segDelta[cur][i]--; segDelta[b][i]++; cur = b; } }
+  }
+  boxList.forEach((b, k) => { b.segDelta = segDelta[k]; });
+  // stock
+  const rewards = [];
+  const stockRows = t.stock || [];
+  const inStock = new Set();
+  for (const r of stockRows) {
+    const rid = String(r.reward_id || "").trim(); if (!/^\d+$/.test(rid)) continue;
+    inStock.add(rid);
+    const daily = rewardDaily.get(rid) || {};
+    const meta = rewardMeta.get(rid) || {};
+    rewards.push({ id: rid, box: String(r.box || meta.box || "").trim(), boxName: String(r.blindbox_milestone || "").trim(), type: String(r.reward_type || meta.type || "").toUpperCase(),
+      merchant: String(r.merchant || "").trim(), denom: num(r.denominations), quota: num(r.quota),
+      sheetDistributed: r.reward_distribution === "" ? null : num(r.reward_distribution),
+      remaining: r.remaining_reward === "" ? null : num(r.remaining_reward), daily: days.map(d => daily[d] || 0) });
+  }
+  for (const [rid, daily] of rewardDaily) {
+    if (inStock.has(rid)) continue; const meta = rewardMeta.get(rid) || {};
+    rewards.push({ id: rid, box: meta.box || "", boxName: "", type: meta.type || "", merchant: meta.name || "", denom: 0, quota: null, sheetDistributed: null, remaining: null, daily: days.map(d => daily[d] || 0) });
+  }
+  // coupons delivered + manual injects
+  let couponRecv = null, manual = null;
+  const cpn = [...(t.coupons || []), ...(t.inject || []).map(r => ({ ...r, __inject: true }))];
+  if (cpn.length) {
+    couponRecv = z(); manual = z(); const seenC = new Set();
+    for (const r of cpn) {
+      const k = String(r.cust_id || "") + "|" + String(r.coupon_code || ""); if (seenC.has(k)) continue; seenC.add(k);
+      const dt = parseDT(r.trans_time) || parseDT(r.recv_date); if (!dt || !idx.has(dt.d)) continue;
+      const i = idx.get(dt.d);
+      if (!r.__inject && /^B\d+$/i.test(String(r.act_id || "").trim())) couponRecv[i]++; else manual[i]++;
+    }
+  }
+  return { v: 1, source: { name: sourceName, loadedAt: new Date().toISOString() }, minDay, maxDay, lastMinute, days, ...A,
+    totalUsers: userFirst.size, boxes: boxList.map(({ id, name, ms, opens, entries, segDelta }) => ({ id, name, ms, opens, entries, segDelta })),
+    rewards, hasStock: stockRows.length > 0, couponRecv, manual, statusOther, rowCount: seen.size };
+}
+
+/* ---------- example data (clearly labelled; replaced by the user's export) ---------- */
+function exampleTables() {
+  let s = 20260901; const rnd = () => (s = (s * 1664525 + 1013904223) % 4294967296) / 4294967296;
+  const boxes = [["B13","Welcome Box",10],["B14","First Stream Box",20],["B15","Example Box 3",35],["B16","Example Box 4",50],["B17","Example Box 5",70],["B18","Example Box 6",95],["B19","Example Box 7",125]];
+  const rewardsByBox = boxes.map((b, i) => [30034 + i * 8, 30035 + i * 8, 30036 + i * 8, 30039 + i * 8]);
+  const start = "2026-08-29", end = "2026-10-01";
+  const users = []; const history = []; let ref = 0;
+  for (let d = start, di = 0; d <= end; d = addDays(d, 1), di++) {
+    const isLast = d === end;
+    const newCount = Math.round((di < 3 ? 20 + di * 30 : 260 + 140 * Math.sin(di / 5) + di * 9) * (0.85 + rnd() * 0.3) * (isLast ? 0.4 : 1));
+    for (let k = 0; k < newCount; k++) users.push({ id: String(201000000000000 + Math.floor(rnd() * 1e9)), stamps: 0, opened: 0, speed: 0.4 + rnd() * 2.2 });
+    for (const u of users) {
+      if (rnd() > (isLast ? 0.22 : 0.55)) continue;
+      u.stamps += Math.round(u.speed * (1 + rnd() * 3));
+      while (u.opened < boxes.length && u.stamps >= boxes[u.opened][2]) {
+        const [bid, bname, ms] = boxes[u.opened]; const rw = rewardsByBox[u.opened];
+        const rid = rw[Math.floor(rnd() * rw.length)]; const isCash = rid === rw[3] || rnd() < 0.35;
+        const failed = rnd() < (di === 20 ? 0.06 : 0.008);
+        const mins = Math.floor(rnd() * (isLast ? 600 : 1439));
+        history.push({ customer_id: u.id, blind_box_id: bid, blind_box_name: bname, stamp_milestone_at_open: ms, reference_no: "EX" + (++ref),
+          created_time: d + " " + Math.floor(mins / 60) + ":" + p2(mins % 60) + ":00", reward_type: isCash ? "CASHBACK" : "COUPON",
+          blind_box_reward_id: String(isCash ? rw[3] : rid), cashback_amount: isCash ? [100, 500, 700, 1000][Math.floor(rnd() * 4)] : "",
+          status: failed ? "FAILED" : "SUCCESS", reward_coupon_name: isCash ? "Balance" : "Example coupon" });
+        u.opened++;
+      }
+    }
+  }
+  const counts = {}; history.forEach(h => { if (h.status === "SUCCESS") counts[h.blind_box_reward_id] = (counts[h.blind_box_reward_id] || 0) + 1; });
+  const stock = []; boxes.forEach((b, i) => rewardsByBox[i].forEach((rid, j) => {
+    const dist = counts[rid] || 0; const quota = j === 3 ? dist * 6 + 2000 : (i === 0 && j === 1 ? dist + 900 : dist * 3 + 500);
+    stock.push({ box: b[0], blindbox_milestone: b[1], reward_id: String(rid), reward_type: j === 3 ? "CASHBACK" : "COUPON", merchant: j === 3 ? "Cashback" : "Example merchant " + (j + 1), denominations: j === 3 ? 500 : 5000, quota, reward_distribution: dist, remaining_reward: quota - dist });
+  }));
+  const coupons = history.filter(h => h.status === "SUCCESS" && h.reward_type === "COUPON" && rnd() < 0.97).map((h, i) => ({ cust_id: h.customer_id, coupon_code: "EXC" + i, trans_time: h.created_time, act_id: h.blind_box_id }));
+  const inject = []; for (let i = 0; i < 180; i++) inject.push({ cust_id: "x" + i, coupon_code: "EXI" + i, trans_time: addDays("2026-09-15", Math.floor(rnd() * 16)) + " 10:00", act_id: "609" + i });
+  return { history, stock, coupons, inject };
+}
+
+/* ---------- state ---------- */
+const STORE_KEY = "bb-s2-monitor-agg";
+const S = { agg: null, isExample: true, range: 30, focus: null, sharedAt: null, note: "", allStock: false };
+try { const r = localStorage.getItem("bb-s2-range"); if (r != null) S.range = +r; } catch (e) {}
+
+/* ---------- derived metrics ---------- */
+const sum = a => a.reduce((x, y) => x + y, 0);
+function avgPrior(arr, i, n = 7) { const s = Math.max(0, i - n); if (i - s <= 0) return null; return sum(arr.slice(s, i)) / (i - s); }
+function cumAt(arr, i) { let c = 0; for (let k = 0; k <= i; k++) c += arr[k]; return c; }
+function delta(cur, ref) { if (ref == null || !isFinite(ref) || ref === 0) return null; return (cur - ref) / ref; }
+function deltaHtml(d, label, invert = false) {
+  if (d == null) return `<span class="flat">${label} –</span>`;
+  const good = invert ? d < 0 : d > 0; const cls = Math.abs(d) < 0.005 ? "flat" : good ? "up" : "down";
+  const arrow = Math.abs(d) < 0.005 ? "→" : d > 0 ? "▲" : "▼";
+  return `<span class="${cls}">${arrow} ${Math.abs(d * 100).toFixed(Math.abs(d) < 0.1 ? 1 : 0)}%</span><span>${label}</span>`;
+}
+function partialDay(a) { return a.lastMinute < 23 * 60 ? a.maxDay : null; }
+
+/* ---------- tooltip ---------- */
+const tip = $("#tip");
+function showTip(e, html) { tip.innerHTML = html; tip.hidden = false; const w = tip.offsetWidth, h = tip.offsetHeight; let x = e.clientX + 14, y = e.clientY + 14; if (x + w > innerWidth - 8) x = e.clientX - w - 14; if (y + h > innerHeight - 8) y = e.clientY - h - 14; tip.style.left = Math.max(8, x) + "px"; tip.style.top = Math.max(8, y) + "px"; }
+function hideTip() { tip.hidden = true; }
+
+/* ---------- charts ---------- */
+const NS = "http://www.w3.org/2000/svg";
+function niceMax(v) { if (v <= 0) return 1; const e = Math.pow(10, Math.floor(Math.log10(v))); const f = v / e; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * e; }
+function timeChart(el, { days, series, line, fmt = fmtN, partial, focus, color }) {
+  const W = Math.max(280, el.clientWidth || 600), H = 210, m = { l: 48, r: 8, t: 10, b: 26 };
+  const n = days.length, iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const totals = days.map((_, i) => series.reduce((s, sr) => s + sr.values[i], 0));
+  const ymax = niceMax(Math.max(1, ...totals, ...(line ? line.values.filter(v => v != null) : [0])));
+  const y = v => m.t + ih - (v / ymax) * ih, step = iw / n, bw = Math.max(1, Math.min(22, step - 2));
+  let g = "";
+  for (let k = 0; k <= 4; k++) { const v = ymax * k / 4, yy = y(v); g += `<line x1="${m.l}" x2="${W - m.r}" y1="${yy}" y2="${yy}" stroke="var(--${k ? "line" : "axis"})" stroke-width="1"/><text x="${m.l - 6}" y="${yy + 4}" text-anchor="end" font-size="11" fill="var(--muted)" font-family="var(--font-mono)">${fmt(v)}</text>`; }
+  const labEvery = Math.ceil(n / Math.max(2, Math.floor(iw / 58)));
+  days.forEach((d, i) => {
+    const x = m.l + i * step + (step - bw) / 2; let acc = 0;
+    series.forEach((sr, si) => {
+      const v = sr.values[i]; if (!v) return; const y0 = y(acc), y1 = y(acc + v); acc += v;
+      const top = si === series.length - 1 || series.slice(si + 1).every(s2 => !s2.values[i]);
+      const hgt = Math.max(1, y0 - y1 - (si ? 1 : 0)), r = top ? Math.min(3, bw / 2, hgt) : 0;
+      const path = r ? `M${x},${y0}V${y1 + r}Q${x},${y1} ${x + r},${y1}H${x + bw - r}Q${x + bw},${y1} ${x + bw},${y1 + r}V${y0}Z` : `M${x},${y0}V${y0 - hgt}H${x + bw}V${y0}Z`;
+      g += `<path d="${path}" fill="${sr.color}" opacity="${d === partial ? 0.4 : 1}"/>`;
+    });
+    if (d === focus) g += `<line x1="${x + bw / 2}" x2="${x + bw / 2}" y1="${m.t}" y2="${m.t + ih}" stroke="var(--fg)" stroke-dasharray="2 3" stroke-width="1" opacity=".5"/>`;
+    if (i % labEvery === 0 || i === n - 1 && n < 20) g += `<text x="${x + bw / 2}" y="${H - 8}" text-anchor="middle" font-size="11" fill="var(--muted)">${fmtDay(d)}</text>`;
+  });
+  if (line) {
+    let p = ""; line.values.forEach((v, i) => { if (v == null) return; const x = m.l + i * step + step / 2; p += (p && line.values[i - 1] != null ? "L" : "M") + x.toFixed(1) + "," + y(v).toFixed(1); });
+    g += `<path d="${p}" fill="none" stroke="var(--fg)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  }
+  g += `<rect class="hl" x="0" y="${m.t}" width="${step}" height="${ih}" fill="var(--fg)" opacity="0" pointer-events="none"/><rect class="hit" x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent"/>`;
+  el.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(series.map(s => s.name).join(", "))} by day">${g}</svg>`;
+  const svg = el.firstChild, hl = svg.querySelector(".hl"), hit = svg.querySelector(".hit");
+  hit.addEventListener("mousemove", e => {
+    const r = svg.getBoundingClientRect(); const i = Math.min(n - 1, Math.max(0, Math.floor((e.clientX - r.left - m.l) / step)));
+    hl.setAttribute("x", m.l + i * step); hl.setAttribute("opacity", ".06");
+    let h = `<div class="t">${fmtDayLong(days[i])}${days[i] === partial ? " · partial" : ""}</div>`;
+    [...series].reverse().forEach(sr => { h += `<div class="r"><span><i style="background:${sr.color}"></i>${esc(sr.name)}</span><span>${fmt(sr.values[i])}</span></div>`; });
+    if (series.length > 1) h += `<div class="r"><span>Total</span><span>${fmt(totals[i])}</span></div>`;
+    if (line && line.values[i] != null) h += `<div class="r"><span>${esc(line.name)}</span><span>${fmt(line.values[i])}</span></div>`;
+    showTip(e, h);
+  });
+  hit.addEventListener("mouseleave", () => { hl.setAttribute("opacity", "0"); hideTip(); });
+}
+function spark(values, { w = 96, h = 22, color = "var(--s1)" } = {}) {
+  const n = values.length; if (!n) return "";
+  const mx = Math.max(1, ...values), x = i => n === 1 ? w / 2 : 2 + i * (w - 4) / (n - 1), y = v => h - 2 - (v / mx) * (h - 5);
+  const pts = values.map((v, i) => x(i).toFixed(1) + "," + y(v).toFixed(1));
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><path d="M${pts[0]}L${pts.join("L")}L${x(n - 1)},${h}L${x(0)},${h}Z" fill="${color}" opacity=".12"/><polyline points="${pts.join(" ")}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"/><circle cx="${x(n - 1)}" cy="${y(values[n - 1])}" r="2.5" fill="${color}"/></svg>`;
+}
+function heatmap(el, { days, rows, partial, focus }) {
+  const cw = 22, ch = 22, top = 22, n = days.length, lw = Math.min(260, 16 + Math.max(...rows.map(r => r.label.length)) * 6.9);
+  const W = lw + n * cw + 8, H = top + rows.length * ch + 4;
+  const mx = Math.max(1, ...rows.flatMap(r => r.values));
+  const ramp = ["--h1", "--h2", "--h3", "--h4", "--h5", "--h6", "--h7"];
+  const col = v => v <= 0 ? "var(--h0)" : `var(${ramp[Math.min(6, Math.floor(Math.sqrt(v / mx) * 7))]})`;
+  let g = "";
+  const labEvery = Math.max(1, Math.ceil(46 / cw));
+  days.forEach((d, i) => { if (i % labEvery === 0) g += `<text x="${lw + i * cw + cw / 2}" y="14" text-anchor="middle" font-size="10" fill="var(--muted)">${fmtDay(d)}</text>`; });
+  rows.forEach((r, ri) => {
+    g += `<text x="${lw - 8}" y="${top + ri * ch + ch / 2 + 4}" text-anchor="end" font-size="12" fill="var(--fg-2)">${esc(r.label)}</text>`;
+    r.values.forEach((v, i) => { g += `<rect data-r="${ri}" data-i="${i}" x="${lw + i * cw + 1}" y="${top + ri * ch + 1}" width="${cw - 2}" height="${ch - 2}" rx="3" fill="${col(v)}" opacity="${days[i] === partial ? 0.5 : 1}" ${days[i] === focus ? 'stroke="var(--fg)" stroke-width="1.5"' : ""}/>`; });
+  });
+  el.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Users reaching each milestone per day">${g}</svg>`;
+  el.firstChild.addEventListener("mousemove", e => {
+    const t = e.target; if (t.tagName !== "rect") return hideTip(); const r = rows[+t.dataset.r], i = +t.dataset.i;
+    showTip(e, `<div class="t">${esc(r.label)} · ${fmtDayLong(days[i])}${days[i] === partial ? " · partial" : ""}</div><div class="r"><span>Users reached</span><span>${fmtN(r.values[i])}</span></div><div class="r"><span>Box opens</span><span>${fmtN(r.opens[i])}</span></div>`);
+  });
+  el.firstChild.addEventListener("mouseleave", hideTip);
+}
+
+/* ---------- render ---------- */
+function render() {
+  const a = S.agg; if (!a) return;
+  const partial = partialDay(a);
+  if (!S.focus || !a.days.includes(S.focus)) S.focus = partial && a.days.length > 1 ? a.days[a.days.length - 2] : a.maxDay;
+  const fi = a.days.indexOf(S.focus), F = S.focus;
+  // controls
+  $("#focus").innerHTML = [...a.days].reverse().map(d => `<option value="${d}" ${d === F ? "selected" : ""}>${fmtDayLong(d)}${d === partial ? " (partial)" : ""}</option>`).join("");
+  document.querySelectorAll("#range button").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.r === S.range)));
+  // source line
+  const loaded = new Date(a.source.loadedAt);
+  const lt = `${loaded.getDate()} ${MON[loaded.getMonth()]} ${p2(loaded.getHours())}:${p2(loaded.getMinutes())}`;
+  $("#source").innerHTML = S.isExample
+    ? `<span class="chip info"><span class="dot"></span>Example data</span><span>Generated sample, not real figures</span>`
+    : `<span class="chip good"><span class="dot"></span>${esc(a.source.name)}</span><span>Data ${fmtDay(a.minDay)} – ${fmtDay(a.maxDay)}${partial ? `, last day until ${p2(Math.floor(a.lastMinute / 60))}:${p2(a.lastMinute % 60)}` : ""}</span><span class="muted">Loaded ${lt}${S.sharedAt ? " · shared with team" : ""}</span>`;
+  $("#banner").innerHTML = S.isExample
+    ? `<span><strong>You're looking at example data.</strong> In the "Blindbox History Report S2" sheet, choose File › Download › Microsoft Excel (.xlsx), then drop the file anywhere on this page.</span><label class="btn" for="file">Choose file</label>`
+    : `<span>${S.note || `${fmtN(a.rowCount)} claims read. Drop a newer export anywhere on this page to refresh.`}</span><label class="btn" for="file">Load newer export</label>`;
+
+  // KPIs
+  const failRate = a.days.map((_, i) => a.claims[i] ? a.failed[i] / a.claims[i] : 0);
+  const cumUsers = []; a.newUsers.reduce((c, v, i) => (cumUsers[i] = c + v), 0);
+  const last14 = arr => arr.slice(Math.max(0, fi - 13), fi + 1);
+  const K = [
+    { label: "Box claims", v: a.claims[fi], arr: a.claims, f: fmtN },
+    { label: "Claiming users", v: a.users[fi], arr: a.users, f: fmtN },
+    { label: "New users", v: a.newUsers[fi], arr: a.newUsers, f: fmtN },
+    { label: "Failure rate", v: failRate[fi], arr: failRate, f: x => fmtPct(x, 2), invert: true },
+    { label: "Cashback paid", v: a.cash[fi], arr: a.cash, f: fmtRp },
+    { label: "Total participants", v: cumUsers[fi], arr: cumUsers, f: fmtN, cum: true },
+  ];
+  $("#kpis").innerHTML = K.map(k => {
+    const prev = fi > 0 ? k.arr[fi - 1] : null, avg = avgPrior(k.arr, fi);
+    const d1 = k.cum ? (fi > 0 ? null : null) : delta(k.v, prev), d7 = k.cum ? null : delta(k.v, avg);
+    const extra = k.cum ? `<span class="up">+${fmtN(a.newUsers[fi])}</span><span>on the day</span>` : `${deltaHtml(d1, "vs prev day", k.invert)} ${deltaHtml(d7, "vs 7d avg", k.invert)}`;
+    return `<div class="kpi"><span class="label">${k.label}</span><span class="value">${k.f(k.v)}</span><div class="deltas">${extra}</div>${spark(last14(k.arr), { w: 160, h: 30 })}</div>`;
+  }).join("");
+
+  // alerts
+  const AL = [];
+  const fr = failRate[fi];
+  if (fr > 0.05) AL.push(["crit", "Failure rate is high", `${fmtPct(fr, 2)} of claims failed (${fmtN(a.failed[fi])} of ${fmtN(a.claims[fi])}).`]);
+  else if (fr > 0.02) AL.push(["warn", "Failure rate above 2%", `${fmtPct(fr, 2)} of claims failed (${fmtN(a.failed[fi])}).`]);
+  const cAvg = avgPrior(a.claims, fi), cd = delta(a.claims[fi], cAvg);
+  if (cd != null && cd < -0.3) AL.push(["warn", "Claims dropped", `${fmtN(a.claims[fi])} claims, ${Math.abs(cd * 100).toFixed(0)}% below the 7-day average of ${fmtN(cAvg)}.`]);
+  if (cd != null && cd > 0.5) AL.push(["info", "Claims spiked", `${fmtN(a.claims[fi])} claims, ${(cd * 100).toFixed(0)}% above the 7-day average. Check for a campaign push or abuse.`]);
+  if (a.other[fi] > 0) AL.push(["warn", "Claims not settled", `${fmtN(a.other[fi])} claims have a status other than SUCCESS or FAILED (${esc(Object.keys(a.statusOther).join(", "))}).`]);
+  const stockRows = stockTable(a, fi);
+  const crit = stockRows.filter(r => r.cover != null && r.cover < 7), warn = stockRows.filter(r => r.cover != null && r.cover >= 7 && r.cover < 14);
+  const out = stockRows.filter(r => r.remaining != null && r.remaining <= 0);
+  if (out.length) AL.push(["crit", `${out.length} reward${out.length > 1 ? "s" : ""} out of stock`, out.slice(0, 4).map(r => esc(r.label)).join(", ") + (out.length > 4 ? "…" : "")]);
+  if (crit.length) AL.push(["crit", `${crit.length} reward${crit.length > 1 ? "s" : ""} under 7 days of stock`, crit.slice(0, 4).map(r => `${esc(r.label)} (${r.cover.toFixed(1)}d)`).join(", ") + (crit.length > 4 ? "…" : "")]);
+  if (warn.length) AL.push(["warn", `${warn.length} reward${warn.length > 1 ? "s" : ""} under 14 days of stock`, warn.slice(0, 4).map(r => `${esc(r.label)} (${r.cover.toFixed(1)}d)`).join(", ") + (warn.length > 4 ? "…" : "")]);
+  if (a.couponRecv) {
+    const won = cumAt(a.coupons, fi - 1), got = cumAt(a.couponRecv, fi - 1);
+    if (won > 0 && (won - got) / won > 0.05) AL.push(["warn", "Coupons not yet delivered", `${fmtN(won - got)} coupons won up to ${fmtDay(a.days[Math.max(0, fi - 1)])} are missing from the Coupon Receive Report (${fmtPct((won - got) / won)}).`]);
+  }
+  if (!AL.length) AL.push(["good", "No issues on " + fmtDay(F), "Failure rate, claim volume, stock cover and coupon delivery are all inside thresholds."]);
+  $("#alerts").innerHTML = AL.map(([lv, t, m]) => `<div class="alert ${lv}"><span class="stripe"></span><div class="msg"><b>${t}</b><span class="small" style="color:var(--fg-2)">${m}</span></div></div>`).join("");
+
+  // range
+  const lo = S.range ? Math.max(0, a.days.length - S.range) : 0;
+  const R = arr => arr.slice(lo), days = R(a.days);
+  const ma = a.claims.map((_, i) => i < 6 ? null : sum(a.claims.slice(i - 6, i + 1)) / 7);
+  timeChart($("#ch-claims"), { days, series: [{ name: "Claims", values: R(a.claims), color: "var(--s1)" }], line: { name: "7-day average", values: R(ma) }, partial, focus: F });
+  timeChart($("#ch-users"), { days, series: [{ name: "Returning", values: R(a.users.map((u, i) => u - a.newUsers[i])), color: "var(--s1)" }, { name: "New", values: R(a.newUsers), color: "var(--s2)" }], partial, focus: F });
+  timeChart($("#ch-cash"), { days, series: [{ name: "Cashback", values: R(a.cash), color: "var(--s1)" }], fmt: fmtRp, partial, focus: F });
+  timeChart($("#ch-coupons"), { days, series: [{ name: "Coupons", values: R(a.coupons), color: "var(--s1)" }], partial, focus: F });
+  timeChart($("#ch-failed"), { days, series: [{ name: "Failed", values: R(a.failed), color: "var(--crit)" }], partial, focus: F });
+
+  // heatmap + tiers
+  heatmap($("#ch-heat"), { days, rows: a.boxes.map(b => ({ label: `${b.ms} stamps · ${b.name}`, values: R(b.entries), opens: R(b.opens) })), partial, focus: F });
+  $("#heat-note").textContent = partial ? `Faded column: ${fmtDay(partial)} is partial` : "";
+  const segNow = a.boxes.map(b => cumAt(b.segDelta, fi));
+  const reached = a.boxes.map(b => cumAt(b.entries, fi));
+  const totalNow = cumUsers[fi] || 1;
+  $("#tbl-tiers").innerHTML = `<thead><tr><th>Milestone</th><th class="n">Users reached</th><th class="n">+ on day</th><th class="n">vs 7d avg</th><th class="n">+ last 7d</th><th class="n">Conversion</th><th>Highest milestone now</th><th>14-day trend</th></tr></thead><tbody>` +
+    a.boxes.map((b, k) => {
+      const day = b.entries[fi], av = avgPrior(b.entries, fi), wk = sum(b.entries.slice(Math.max(0, fi - 6), fi + 1));
+      const conv = k ? (reached[k - 1] ? reached[k] / reached[k - 1] : null) : reached[0] / totalNow;
+      const share = segNow[k] / totalNow;
+      return `<tr><td><b>${b.ms} stamps</b><span class="sub">${esc(b.name)} · ${esc(b.id)}</span></td><td class="n">${fmtN(reached[k])}</td><td class="n">+${fmtN(day)}</td><td class="n">${deltaHtml(delta(day, av), "").replace(/<span>.*?<\/span>$/, "")}</td><td class="n">+${fmtN(wk)}</td><td class="n">${fmtPct(conv)}</td>
+      <td><div class="bar-cell"><span class="track"><span class="fill" style="width:${(share * 100).toFixed(1)}%;display:block"></span></span><span class="num small">${fmtN(segNow[k])} · ${fmtPct(share, 0)}</span></div></td><td>${spark(b.entries.slice(Math.max(0, fi - 13), fi + 1))}</td></tr>`;
+    }).join("") + `</tbody>`;
+
+  // boxes
+  const totalOpens = a.claims[fi] || 1;
+  $("#tbl-boxes").innerHTML = `<thead><tr><th>Box</th><th class="n">Opens</th><th class="n">Share</th><th class="n">vs prev day</th><th class="n">vs 7d avg</th><th class="n">Opens to date</th><th>14-day trend</th></tr></thead><tbody>` +
+    a.boxes.map(b => {
+      const v = b.opens[fi];
+      const dd = s => s.replace(/<span>[^<]*<\/span>$/, "");
+      return `<tr><td><b>${esc(b.name)}</b><span class="sub">${esc(b.id)} · ${b.ms} stamps</span></td><td class="n">${fmtN(v)}</td><td class="n">${fmtPct(v / totalOpens, 0)}</td><td class="n">${dd(deltaHtml(delta(v, fi ? b.opens[fi - 1] : null), ""))}</td><td class="n">${dd(deltaHtml(delta(v, avgPrior(b.opens, fi)), ""))}</td><td class="n">${fmtN(cumAt(b.opens, fi))}</td><td>${spark(b.opens.slice(Math.max(0, fi - 13), fi + 1))}</td></tr>`;
+    }).join("") + `</tbody>`;
+
+  // stock
+  const chipFor = r => r.remaining != null && r.remaining <= 0 ? `<span class="chip crit"><span class="dot"></span>Out of stock</span>`
+    : r.cover == null ? (r.remaining == null ? `<span class="chip"><span class="dot"></span>No stock data</span>` : `<span class="chip good"><span class="dot"></span>No recent payouts</span>`)
+    : r.cover < 7 ? `<span class="chip crit"><span class="dot"></span>Under 7 days</span>` : r.cover < 14 ? `<span class="chip warn"><span class="dot"></span>Under 14 days</span>` : `<span class="chip good"><span class="dot"></span>OK</span>`;
+  $("#tbl-stock").innerHTML = `<thead><tr><th>Reward</th><th>Box</th><th class="n">Paid on day</th><th class="n">Avg / day (7d)</th><th class="n">Remaining</th><th class="n">Days of cover</th><th>Status</th><th>14-day payouts</th></tr></thead><tbody>` +
+    stockRows.slice(0, S.allStock ? 1e9 : 12).map(r => `<tr><td><b>${esc(r.label)}</b><span class="sub">${esc(r.type)} · ID ${esc(r.id)}</span></td><td>${esc(r.boxName || r.box)}</td><td class="n">${fmtN(r.day)}</td><td class="n">${r.avg == null ? "–" : r.avg.toFixed(1)}</td><td class="n">${r.remaining == null ? "–" : fmtN(r.remaining)}</td><td class="n">${r.cover == null ? "–" : r.cover > 365 ? "365+" : r.cover.toFixed(1)}</td><td>${chipFor(r)}</td><td>${spark(r.trend)}</td></tr>`).join("") + `</tbody>` +
+    (stockRows.length > 12 ? `<caption style="caption-side:bottom;text-align:left;padding-top:10px"><button type="button" class="btn" id="stock-more">${S.allStock ? "Show the 12 most urgent" : `Show all ${stockRows.length} rewards`}</button></caption>` : "") +
+    (a.hasStock ? "" : `<caption class="small muted" style="caption-side:bottom;text-align:left;padding-top:8px">Remaining stock needs the Stock Monitoring tab. Load the full .xlsx export to see days of cover.</caption>`);
+
+  // delivery
+  const from = Math.max(0, fi - 6);
+  if (!a.couponRecv) {
+    $("#tbl-delivery").innerHTML = `<caption class="small muted" style="caption-side:bottom;text-align:left">Coupon delivery needs the Coupon Receive Report and Manual Inject tabs. Load the full .xlsx export to see them.</caption>`;
+  } else {
+    let rows = ""; for (let i = fi; i >= from; i--) {
+      const gap = a.coupons[i] - a.couponRecv[i];
+      rows += `<tr><td>${fmtDayLong(a.days[i])}${a.days[i] === partial ? ' <span class="chip">partial</span>' : ""}</td><td class="n">${fmtN(a.coupons[i])}</td><td class="n">${fmtN(a.couponRecv[i])}</td><td class="n ${gap > 0 ? "down" : ""}">${gap > 0 ? fmtN(gap) : "0"}</td><td class="n">${fmtN(a.manual[i])}</td></tr>`;
+    }
+    $("#tbl-delivery").innerHTML = `<thead><tr><th>Day</th><th class="n">Won</th><th class="n">In report</th><th class="n">Gap</th><th class="n">Manual inject</th></tr></thead><tbody>${rows}</tbody><caption class="small muted" style="caption-side:bottom;text-align:left;padding-top:8px">The Coupon Receive Report is loaded the next morning, so the newest day usually shows a gap.</caption>`;
+  }
+}
+function stockTable(a, fi) {
+  return a.rewards.map(r => {
+    const avg = avgPrior(r.daily, fi);
+    const cover = r.remaining != null && avg ? r.remaining / avg : null;
+    const label = r.merchant && r.merchant !== "Cashback" ? `${r.merchant}${r.denom ? " Rp" + fmtN(r.denom) : ""}` : r.type === "CASHBACK" && r.denom ? `Cashback Rp${fmtN(r.denom)}` : r.merchant || "Reward " + r.id;
+    return { ...r, label, avg, cover, day: r.daily[fi], trend: r.daily.slice(Math.max(0, fi - 13), fi + 1) };
+  }).sort((x, y) => (x.remaining != null && x.remaining <= 0 ? -1 : 0) - (y.remaining != null && y.remaining <= 0 ? -1 : 0) || (x.cover ?? 1e9) - (y.cover ?? 1e9) || (y.avg ?? 0) - (x.avg ?? 0));
+}
+
+/* ---------- loading files ---------- */
+async function loadFiles(files) {
+  if (!files || !files.length) return;
+  if (typeof XLSX === "undefined") { setNote("The spreadsheet reader didn't load. Check your connection and reload the page."); return; }
+  const app = $("#app"); app.classList.add("loading");
+  setNote(`Reading ${[...files].map(f => f.name).join(", ")}…`);
+  await new Promise(r => setTimeout(r, 30));
+  try {
+    const t = {}; const used = [];
+    for (const f of files) {
+      const buf = await f.arrayBuffer();
+      const isCsv = /\.csv$/i.test(f.name);
+      const wb = isCsv ? XLSX.read(new TextDecoder().decode(buf), { type: "string", raw: true }) : XLSX.read(buf, { type: "array" });
+      for (const sn of wb.SheetNames) {
+        const rows = sheetRows(wb.Sheets[sn]); const kind = classify(rows, isCsv ? f.name : sn);
+        if (!kind) continue; (t[kind] = t[kind] || []).push(...rows); used.push(`${sn} (${kind})`);
+      }
+    }
+    if (!t.history) throw new Error("Couldn't find the BlindBox History Report tab. Use the .xlsx download of \"Blindbox History Report S2\", or a CSV of that tab.");
+    const agg = aggregate(t, files.length === 1 ? files[0].name : files.length + " files");
+    S.agg = agg; S.isExample = false; S.focus = null; S.sharedAt = null;
+    S.note = `${fmtN(agg.rowCount)} claims read from ${used.length} tab${used.length > 1 ? "s" : ""}.`;
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(agg)); } catch (e) {}
+    render();
+    shareSnapshot(agg);
+  } catch (e) {
+    setNote(e.message || String(e));
+  } finally { app.classList.remove("loading"); }
+}
+function setNote(msg) { S.note = msg; if (S.agg) render(); else $("#banner").textContent = msg; }
+
+/* ---------- team snapshot (aggregates only, no customer ids) ---------- */
+let dbRef = null;
+async function shareSnapshot(agg) {
+  if (!dbRef) return;
+  const body = JSON.stringify(agg);
+  if (body.length > 240000) { S.note += " Too large to share with the team; it's saved in this browser only."; render(); return; }
+  try {
+    await dbRef.set({ agg: body, savedAt: agg.source.loadedAt });
+    S.sharedAt = agg.source.loadedAt; S.note += " Shared with everyone who opens this page."; render();
+  } catch (e) {
+    S.note += e && e.code === "invalid_argument" ? " Only editors can update the team view, so this stays in your browser." : " Couldn't share with the team right now; it's saved in this browser."; render();
+  }
+}
+(async () => {
+  try {
+    const db = window.claude && window.claude.use ? await window.claude.use("db") : null;
+    if (!db) return;
+    dbRef = db.doc("snapshots/latest");
+    dbRef.onSnapshot(snap => {
+      if (!snap.exists) return; const d = snap.data(); if (!d || !d.agg) return;
+      if (S.agg && !S.isExample && S.agg.source.loadedAt >= d.savedAt) { if (S.agg.source.loadedAt === d.savedAt && !S.sharedAt) { S.sharedAt = d.savedAt; render(); } return; }
+      try { S.agg = JSON.parse(d.agg); S.isExample = false; S.sharedAt = d.savedAt; S.note = ""; S.focus = null; render(); } catch (e) {}
+    }, () => {});
+  } catch (e) {}
+})();
+
+/* ---------- events ---------- */
+document.addEventListener("click", e => { if (e.target.id === "stock-more") { S.allStock = !S.allStock; render(); } });
+$("#file").addEventListener("change", e => { loadFiles(e.target.files); e.target.value = ""; });
+$("#focus").addEventListener("change", e => { S.focus = e.target.value; render(); });
+$("#range").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; S.range = +b.dataset.r; try { localStorage.setItem("bb-s2-range", String(S.range)); } catch (er) {} render(); });
+let dragDepth = 0;
+addEventListener("dragenter", e => { e.preventDefault(); dragDepth++; document.body.classList.add("dragging"); });
+addEventListener("dragleave", () => { if (--dragDepth <= 0) { dragDepth = 0; document.body.classList.remove("dragging"); } });
+addEventListener("dragover", e => e.preventDefault());
+addEventListener("drop", e => { e.preventDefault(); dragDepth = 0; document.body.classList.remove("dragging"); loadFiles(e.dataTransfer.files); });
+let rz; addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(render, 150); });
+
+/* ---------- boot ---------- */
+(function boot() {
+  try { const s = localStorage.getItem(STORE_KEY); if (s) { S.agg = JSON.parse(s); S.isExample = false; S.note = ""; } } catch (e) {}
+  if (!S.agg) { S.agg = aggregate(exampleTables(), "Example data"); S.isExample = true; }
+  render();
+})();
+</script>
