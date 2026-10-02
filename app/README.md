@@ -42,7 +42,7 @@ pass `--remote` or run `deploy`.
 | `npm run seed` | Migrate + load `../docs/*.csv` into local D1. Re-runnable. |
 | `npm run db:reset` | Delete the local database and re-migrate. |
 | `npm run db:migrate:remote` | Apply migrations to the **real** D1. Asks nothing — be sure. |
-| `npm run deploy` | Build and `wrangler pages deploy`. Touches your account. |
+| `npm run deploy` | Build and `wrangler pages deploy`. Touches your account. Pushes to `main` do this from GitHub Actions. |
 
 ---
 
@@ -179,7 +179,21 @@ npm run deploy
 > the **local** database, so local D1 will look empty afterwards. Run
 > `npm run seed` once to repopulate it. Production is unaffected.
 
-After that, `npm run deploy` is all you need. To wire up your own domain:
+After that, deploys run from GitHub (`.github/workflows/deploy.yml`): every
+push to `main` runs the tests, builds, and publishes to Pages. It needs two
+repository secrets under **Settings → Secrets and variables → Actions**:
+
+| Secret | Value |
+|---|---|
+| `CLOUDFLARE_API_TOKEN` | An API token (My Profile → API Tokens → Create custom token) with **Account › Cloudflare Pages › Edit** and **Account › D1 › Edit** |
+| `CLOUDFLARE_ACCOUNT_ID` | The account id, shown on the Workers & Pages overview |
+
+To redeploy without a commit, use **Actions → Deploy → Run workflow**.
+`npm run deploy` from a logged-in machine still works and does the same thing.
+Migrations are never applied automatically: run `npm run db:migrate:remote`
+before merging a change that adds one.
+
+To wire up your own domain:
 
 1. **Workers & Pages → blindbox-dashboard → Custom domains → Set up a custom
    domain.** Enter the hostname, e.g. `blindbox.yourdomain.com`.
