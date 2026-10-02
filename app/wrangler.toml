@@ -1,0 +1,21 @@
+# Cloudflare Pages project configuration.
+#
+# The binding is `DB` (referenced as env.DB throughout functions/), not the name
+# wrangler suggests on creation. Database created in APAC, the closest region to
+# Jakarta where the campaign runs.
+#
+# Local development and `npm run seed` never touch this database: wrangler keeps
+# a separate SQLite file under .wrangler/state unless you pass --remote.
+
+name = "blindbox-dashboard"
+compatibility_date = "2026-09-15"
+pages_build_output_dir = "./dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "blindbox-dashboard"
+database_id = "6fcced08-6316-4938-a110-4b5365583062"
+migrations_dir = "migrations"
+
+# Configure ADMIN_PASSWORD as a Cloudflare Pages secret for deployed uploads.
+# Local development reads it from .dev.vars, which is ignored by Git.

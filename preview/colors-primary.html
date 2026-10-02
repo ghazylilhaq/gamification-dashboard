@@ -1,0 +1,26 @@
+<!doctype html>
+<!-- @dsCard group="Brand" name="Primary palette" subtitle="Allo Yellow, Raisin Black, White" viewport="700x180" -->
+<html><head>
+<meta charset="utf-8">
+<title>Colors — Primary</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 24px; background: var(--bg-2); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .swatch { border-radius: var(--radius-md); padding: 16px; height: 96px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: var(--shadow-1); }
+  .name { font-family: var(--font-display); font-weight: 700; font-size: 16px; letter-spacing: -0.01em; }
+  .hex { font-family: var(--font-mono); font-size: 12px; opacity: 0.85; }
+</style>
+</head><body>
+  <div class="grid">
+    <div class="swatch" style="background:#FFAF03; color:#333;">
+      <div class="name">Allo Yellow</div><div class="hex">#FFAF03</div>
+    </div>
+    <div class="swatch" style="background:#333; color:#FFAF03;">
+      <div class="name">Raisin Black</div><div class="hex">#333333</div>
+    </div>
+    <div class="swatch" style="background:#fff; color:#333; border:1px solid var(--line-1);">
+      <div class="name">White</div><div class="hex">#FFFFFF</div>
+    </div>
+  </div>
+</body></html>

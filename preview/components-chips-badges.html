@@ -1,0 +1,37 @@
+<!doctype html>
+<!-- @dsCard group="Brand" name="Chips & Badges" subtitle="Filter chips + status badges" viewport="700x130" -->
+<html><head>
+<meta charset="utf-8">
+<title>Chips & Badges</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 24px; background: #fff; font-family: var(--font-ui); display: flex; flex-direction: column; gap: 14px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .chip { font-size: 13px; font-weight: 500; padding: 6px 12px; border-radius: 999px; }
+  .ch-1 { background: #FFAF03; color: #333; }
+  .ch-2 { background: #333; color: #fff; }
+  .ch-3 { background: #F5F5F5; color: #333; }
+  .ch-4 { background: #fff; color: #333; border: 1.5px solid #333; }
+  .badge { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 999px; }
+  .b-success { background: #E6F6EC; color: #1F9D55; }
+  .b-warn { background: #FFEDD5; color: #F38000; }
+  .b-danger { background: #FCE8E8; color: #D14343; }
+  .b-info { background: #E8F0FE; color: #2F6FED; }
+  .b-new { background: #E947A5; color: #fff; }
+</style>
+</head><body>
+  <div class="row">
+    <span class="chip ch-1">Semua</span>
+    <span class="chip ch-3">Transfer</span>
+    <span class="chip ch-3">Top up</span>
+    <span class="chip ch-3">Tagihan</span>
+    <span class="chip ch-4">+ Filter</span>
+  </div>
+  <div class="row">
+    <span class="badge b-success">Berhasil</span>
+    <span class="badge b-warn">Pending</span>
+    <span class="badge b-danger">Gagal</span>
+    <span class="badge b-info">Diproses</span>
+    <span class="badge b-new">BARU</span>
+  </div>
+</body></html>

@@ -1,0 +1,79 @@
+<!doctype html>
+<!-- @dsCard group="Brand" name="Brand · Master wordmark" subtitle="Real PNG logo · all 6 horizontal + 2 vertical variants" viewport="720x900" -->
+<html><head>
+<meta charset="utf-8">
+<title>Brand — Wordmark</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 0; background: var(--bg-2); font-family: var(--font-ui); color: var(--ink-2); }
+  .wrap { padding: 32px; display: grid; gap: 24px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .tile {
+    border-radius: var(--radius-lg);
+    padding: 40px;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 160px;
+    position: relative;
+    overflow: hidden;
+  }
+  .tile img { max-width: 70%; max-height: 80px; object-fit: contain; display: block; }
+  .tile.full { grid-column: 1 / -1; min-height: 200px; padding: 56px; }
+  .tile.full img { max-height: 110px; }
+  .label {
+    position: absolute; top: 14px; left: 16px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--ink-4);
+  }
+  .tile.dark .label { color: rgba(255,255,255,0.6); }
+  .tile.yellow .label { color: rgba(51,51,51,0.55); }
+
+  .bg-white  { background: #fff; box-shadow: var(--shadow-1); }
+  .bg-yellow { background: var(--allo-yellow); }
+  .bg-dark   { background: var(--raisin-black); }
+  .bg-gray   { background: var(--surface-3); }
+
+  h2 { font-family: var(--font-display); font-size: 14px; font-weight: 700;
+       letter-spacing: 0.08em; text-transform: uppercase;
+       color: var(--ink-3); margin: 8px 0 0 4px; }
+</style>
+</head><body>
+  <div class="wrap">
+    <h2>Primary lockup — horizontal</h2>
+    <div class="tile bg-white full">
+      <span class="label">Master mark · color on white</span>
+      <img src="../assets/logo/horizontal/02.png" alt="allobank logo">
+    </div>
+
+    <h2>Color variations</h2>
+    <div class="row">
+      <div class="tile bg-yellow yellow">
+        <span class="label">Mono ink on yellow</span>
+        <img src="../assets/logo/horizontal/01-color.png" alt="">
+      </div>
+      <div class="tile bg-dark dark">
+        <span class="label">Mono yellow on dark</span>
+        <img src="../assets/logo/horizontal/03.png" alt="">
+      </div>
+      <div class="tile bg-yellow yellow">
+        <span class="label">Capsule · yellow</span>
+        <img src="../assets/logo/horizontal/05.png" alt="">
+      </div>
+      <div class="tile bg-dark dark">
+        <span class="label">Capsule · dark</span>
+        <img src="../assets/logo/horizontal/06.png" alt="">
+      </div>
+    </div>
+
+    <h2>Vertical lockup</h2>
+    <div class="row">
+      <div class="tile bg-white" style="min-height:220px;">
+        <span class="label">Vertical · color</span>
+        <img src="../assets/logo/vertical/02.png" alt="" style="max-height:160px; max-width:60%;">
+      </div>
+      <div class="tile bg-dark dark" style="min-height:220px;">
+        <span class="label">Vertical · yellow on dark</span>
+        <img src="../assets/logo/vertical/03.png" alt="" style="max-height:160px; max-width:60%;">
+      </div>
+    </div>
+  </div>
+</body></html>

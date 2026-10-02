@@ -1,0 +1,250 @@
+/* =============================================================================
+   Allo Bank — Colors & Type
+   Source of truth for color tokens, typography stacks, and base type styles.
+
+   Fonts:
+   - Satoshi (Brand display + headlines + marketing copy):
+       Loaded from Fontshare. Weights: 300/400/500/700/900 + italics.
+   - Inter (App UI, body, dense data):
+       Loaded from Google Fonts. Weights: 400/500/600/700.
+   ========================================================================== */
+
+/* Local font files — official brand assets in /fonts/.
+   Resolves both ../fonts/ (when CSS is at root) and /fonts/ (when imported elsewhere). */
+@font-face {
+  font-family: 'Satoshi';
+  src: url('fonts/Satoshi-Light.otf') format('opentype');
+  font-weight: 300; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Satoshi';
+  src: url('fonts/Satoshi-Regular.otf') format('opentype');
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Satoshi';
+  src: url('fonts/Satoshi-Italic.ttf') format('truetype');
+  font-weight: 400; font-style: italic; font-display: swap;
+}
+@font-face {
+  font-family: 'Satoshi';
+  src: url('fonts/Satoshi-Medium.otf') format('opentype');
+  font-weight: 500; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Satoshi';
+  src: url('fonts/Satoshi-Bold.otf') format('opentype');
+  font-weight: 700; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Satoshi';
+  src: url('fonts/Satoshi-BoldItalic.ttf') format('truetype');
+  font-weight: 700; font-style: italic; font-display: swap;
+}
+@font-face {
+  font-family: 'Satoshi';
+  src: url('fonts/Satoshi-Black.otf') format('opentype');
+  font-weight: 900; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('fonts/Inter-Regular.ttf') format('truetype');
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('fonts/Inter-Medium.ttf') format('truetype');
+  font-weight: 500; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('fonts/Inter-SemiBold.ttf') format('truetype');
+  font-weight: 600; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('fonts/Inter-Bold.ttf') format('truetype');
+  font-weight: 700; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('fonts/Inter-Black.ttf') format('truetype');
+  font-weight: 900; font-style: normal; font-display: swap;
+}
+
+:root {
+  /* ---------- BRAND COLORS ----------
+     Primary palette — used for 80%+ of brand surfaces.
+  */
+  --allo-yellow:        #FFAF03;   /* Primary brand color. Optimism, energy. */
+  --allo-yellow-tint:   #FFE39B;   /* Soft yellow for backgrounds, hover */
+  --raisin-black:       #333333;   /* Primary ink. Use instead of pure #000 */
+  --white:              #FFFFFF;
+
+  /* ---------- SECONDARY ACCENTS ----------
+     Use to differentiate sub-products. Never as a primary brand color.
+  */
+  --allo-orange:        #F38000;   /* Allo Pay+, accents */
+  --allo-magenta:       #E947A5;   /* Allo PayLater */
+  --allo-purple:        #B1B5FF;   /* Bank Activities, Allo Bisnis */
+  --allo-teal:          #4597A8;   /* Allo Grow, Deposito */
+  --allo-cyan:          #B1EFCE;   /* Allo Explore, soft accent */
+
+  /* ---------- NEUTRAL SCALE ---------- */
+  --ink-1:    #1A1A1A;             /* highest emphasis text */
+  --ink-2:    #333333;             /* default body (raisin black) */
+  --ink-3:    #5C5C5C;             /* secondary text */
+  --ink-4:    #8A8A8A;             /* tertiary, captions */
+  --ink-5:    #B8B8B8;             /* disabled, hints */
+  --line-1:   #E6E6E6;             /* divider, hairline */
+  --line-2:   #F0F0F0;             /* subtle separator */
+  --surface-1: #FFFFFF;            /* default surface */
+  --surface-2: #FAFAFA;            /* page bg, card bg */
+  --surface-3: #F5F5F5;            /* recessed */
+
+  /* ---------- SEMANTIC ---------- */
+  --success:    #1F9D55;
+  --success-bg: #E6F6EC;
+  --warn:       #F38000;            /* same as Allo Orange */
+  --warn-bg:    #FFEDD5;
+  --danger:     #D14343;
+  --danger-bg:  #FCE8E8;
+  --info:       #2F6FED;
+  --info-bg:    #E8F0FE;
+
+  /* ---------- FOREGROUND / BACKGROUND TOKENS ---------- */
+  --fg-1: var(--ink-1);
+  --fg-2: var(--ink-2);
+  --fg-3: var(--ink-3);
+  --fg-4: var(--ink-4);
+  --fg-on-yellow: var(--raisin-black);
+  --fg-on-dark:   var(--white);
+
+  --bg-1: var(--surface-1);
+  --bg-2: var(--surface-2);
+  --bg-3: var(--surface-3);
+  --bg-brand: var(--allo-yellow);
+  --bg-ink:   var(--raisin-black);
+
+  /* ---------- TYPOGRAPHY ---------- */
+  --font-display: 'Satoshi', 'Helvetica Neue', Arial, sans-serif;
+  --font-ui:      'Inter', 'Helvetica Neue', Arial, sans-serif;
+  --font-mono:    ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* Type scale (tight, editorial — Satoshi loves negative tracking) */
+  --fs-display-1: 96px;
+  --fs-display-2: 72px;
+  --fs-h1:        56px;
+  --fs-h2:        40px;
+  --fs-h3:        28px;
+  --fs-h4:        22px;
+  --fs-body-lg:   18px;
+  --fs-body:      16px;
+  --fs-body-sm:   14px;
+  --fs-caption:   12px;
+
+  --lh-tight: 1.05;
+  --lh-snug:  1.2;
+  --lh-base:  1.45;
+  --lh-loose: 1.6;
+
+  --tracking-display: -0.025em;   /* big satoshi headlines */
+  --tracking-h:       -0.015em;
+  --tracking-body:    0;
+  --tracking-eyebrow: 0.08em;
+
+  /* ---------- RADII ----------
+     Allo uses generous, soft rounding — never sharp corners on cards.
+  */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 16px;     /* default card */
+  --radius-lg: 24px;     /* hero card */
+  --radius-xl: 32px;
+  --radius-pill: 999px;  /* buttons, chips, the "allo" wordmark feel */
+
+  /* ---------- SHADOW (soft, warm-tinted) ---------- */
+  --shadow-1: 0 1px 2px rgba(51,51,51,0.06), 0 1px 1px rgba(51,51,51,0.04);
+  --shadow-2: 0 6px 18px rgba(51,51,51,0.08), 0 2px 4px rgba(51,51,51,0.04);
+  --shadow-3: 0 18px 48px rgba(51,51,51,0.12), 0 4px 12px rgba(51,51,51,0.06);
+  --shadow-yellow: 0 12px 28px rgba(255,175,3,0.35);
+
+  /* ---------- SPACING (4-base) ---------- */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+  --sp-16: 64px;
+  --sp-20: 80px;
+  --sp-24: 96px;
+}
+
+/* =============================================================================
+   Base type styles — semantic tags get sensible defaults.
+   ========================================================================== */
+html, body {
+  font-family: var(--font-ui);
+  color: var(--fg-2);
+  background: var(--bg-1);
+  font-size: var(--fs-body);
+  line-height: var(--lh-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, h5,
+.display-1, .display-2 {
+  font-family: var(--font-display);
+  color: var(--fg-1);
+  margin: 0;
+  letter-spacing: var(--tracking-h);
+  text-wrap: balance;
+}
+
+.display-1 {
+  font-size: var(--fs-display-1);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tracking-display);
+  font-weight: 900;
+}
+.display-2 {
+  font-size: var(--fs-display-2);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tracking-display);
+  font-weight: 700;
+}
+h1 { font-size: var(--fs-h1); line-height: var(--lh-snug); font-weight: 700; }
+h2 { font-size: var(--fs-h2); line-height: var(--lh-snug); font-weight: 700; }
+h3 { font-size: var(--fs-h3); line-height: var(--lh-snug); font-weight: 700; }
+h4 { font-size: var(--fs-h4); line-height: var(--lh-snug); font-weight: 600; }
+
+p   { margin: 0 0 1em 0; }
+.lead { font-size: var(--fs-body-lg); color: var(--fg-2); line-height: var(--lh-base); }
+.body-sm { font-size: var(--fs-body-sm); }
+.caption { font-size: var(--fs-caption); color: var(--fg-3); line-height: var(--lh-base); }
+
+.eyebrow {
+  font-family: var(--font-ui);
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+
+a {
+  color: var(--fg-1);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+}
+
+code, pre, kbd, samp {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}

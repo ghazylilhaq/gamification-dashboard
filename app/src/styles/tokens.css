@@ -1,0 +1,129 @@
+/* =============================================================================
+   Design tokens — the single source of truth for colour, type, spacing, radius
+   and elevation across the dashboard.
+
+   Built on the Allo Bank brand system (../../colors_and_type.css). Two
+   deliberate departures from it, both for legibility in a dense data UI:
+
+   1. Allo Yellow is a brand and action colour only. It is never used for chart
+      series, thin strokes or small text, where it fails against white.
+   2. Charts draw from their own palette, chosen for contrast against each
+      other and against the page, not from the product accent colours.
+
+   The brand's Inter files in ../fonts are truncated and unusable (see
+   ../IMPORT-NOTES.md), so both families are loaded from their web sources in
+   main.css, which imports this file.
+   ========================================================================== */
+
+@theme {
+  /* ---------- brand ---------- */
+  --color-allo-yellow: #ffaf03;
+  --color-allo-yellow-tint: #ffe39b;
+  --color-allo-yellow-deep: #b87d00;   /* yellow that passes on white text */
+
+  /* ---------- ink & surface ---------- */
+  --color-ink-1: #1a1a1a;
+  --color-ink-2: #333333;
+  --color-ink-3: #5c5c5c;
+  --color-ink-4: #8a8a8a;
+  --color-ink-5: #b8b8b8;
+  --color-line-1: #e6e6e6;
+  --color-line-2: #f0f0f0;
+  --color-surface-1: #ffffff;
+  --color-surface-2: #fafafa;
+  --color-surface-3: #f5f5f5;
+
+  /* ---------- semantic ---------- */
+  --color-success: #1f9d55;
+  --color-success-bg: #e6f6ec;
+  --color-warn: #f38000;
+  --color-warn-bg: #ffedd5;
+  --color-danger: #d14343;
+  --color-danger-bg: #fce8e8;
+  --color-info: #2f6fed;
+  --color-info-bg: #e8f0fe;
+
+  /* ---------- rarity ---------- */
+  --color-rarity-common: #5c5c5c;
+  --color-rarity-common-bg: #f0f0f0;
+  --color-rarity-rare: #2f6fed;
+  --color-rarity-rare-bg: #e8f0fe;
+  --color-rarity-super: #e947a5;
+  --color-rarity-super-bg: #fdeaf6;
+
+  /* ---------- reward type ---------- */
+  --color-type-cashback: #4597a8;
+  --color-type-cashback-bg: #e6f3f6;
+  --color-type-coupon: #4f46e5;
+  --color-type-coupon-bg: #eceafd;
+  --color-type-gacha: #f38000;
+  --color-type-gacha-bg: #ffedd5;
+
+  /* ---------- stock status ---------- */
+  --color-stock-ok: #1f9d55;
+  --color-stock-warning: #f38000;
+  --color-stock-out: #d14343;
+  --color-stock-none: #b8b8b8;
+
+  /* ---------- chart series ---------- */
+  --color-chart-1: #2f6fed;   /* box claims */
+  --color-chart-2: #f38000;   /* gacha claims */
+  --color-chart-3: #1a1a1a;   /* spend line */
+  --color-chart-4: #4597a8;   /* cashback spend */
+  --color-chart-5: #4f46e5;   /* coupon spend */
+  --color-chart-grid: #ececec;
+
+  /* ---------- type ---------- */
+  --font-display: 'Satoshi', 'Inter', system-ui, sans-serif;
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --text-display: 2rem;
+  --text-display--line-height: 1.15;
+  --text-display--letter-spacing: -0.02em;
+  --text-kpi: 1.75rem;
+  --text-kpi--line-height: 1.1;
+  --text-kpi--letter-spacing: -0.02em;
+  --text-micro: 0.6875rem;
+  --text-micro--line-height: 1.3;
+
+  /* ---------- radius ---------- */
+  --radius-card: 0.875rem;
+  --radius-control: 0.625rem;
+  --radius-pill: 999px;
+
+  /* ---------- elevation ---------- */
+  --shadow-card: 0 1px 2px rgb(26 26 26 / 0.04), 0 1px 3px rgb(26 26 26 / 0.06);
+  --shadow-raised: 0 4px 12px rgb(26 26 26 / 0.08);
+  --shadow-panel: -8px 0 24px rgb(26 26 26 / 0.10);
+}
+
+:root {
+  color-scheme: light;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-surface-2);
+  color: var(--color-ink-2);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Tabular figures everywhere numbers are compared down a column. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Respect a reader who has asked for less movement. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

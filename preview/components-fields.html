@@ -1,0 +1,26 @@
+<!doctype html>
+<!-- @dsCard group="Brand" name="Form fields" subtitle="Default / focus / error states" viewport="700x220" -->
+<html><head>
+<meta charset="utf-8">
+<title>Form fields</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 24px; background: #fff; font-family: var(--font-ui); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field > label { font-size: 13px; font-weight: 500; color: var(--fg-2); }
+  .input { font-family: var(--font-ui); font-size: 15px; padding: 12px 14px; border: 1.5px solid #E6E6E6; border-radius: 12px; background: #fff; outline: none; }
+  .input::placeholder { color: var(--fg-4); }
+  .input.focus { border-color: #FFAF03; box-shadow: 0 0 0 4px rgba(255,175,3,0.18); }
+  .input.error { border-color: #D14343; }
+  .help { font-size: 12px; color: var(--fg-4); }
+  .help.err { color: #D14343; }
+</style>
+</head><body>
+  <div class="grid">
+    <div class="field"><label>Nomor HP</label><input class="input" placeholder="08•••••" value="081234567890"></div>
+    <div class="field"><label>Email</label><input class="input focus" placeholder="kamu@email.com"><span class="help">Akan dipakai untuk login</span></div>
+    <div class="field"><label>Nominal transfer</label><input class="input" value="Rp 250.000"></div>
+    <div class="field"><label>OTP</label><input class="input error" value="0 0"><span class="help err">Kode tidak cocok. Coba lagi.</span></div>
+  </div>
+</body></html>

@@ -1,0 +1,21 @@
+# Internal bank data behind Cloudflare Access. These headers are a second
+# layer, not the access control itself.
+#
+# There is deliberately no Content-Security-Policy here: the page pulls fonts
+# from Google Fonts and Fontshare and reward artwork from the campaign's COS
+# bucket, so a policy has to allowlist all three, and a wrong one fails
+# silently in the browser. See "Optional hardening" in README.md for the header
+# to add once you can verify it in a browser.
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  X-Robots-Tag: noindex, nofollow, noarchive
+  Permissions-Policy: geolocation=(), camera=(), microphone=()
+  Cross-Origin-Opener-Policy: same-origin
+
+/index.html
+  Cache-Control: no-store
+
+/api/*
+  Cache-Control: no-store

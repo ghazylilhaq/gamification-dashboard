@@ -1,0 +1,53 @@
+id,quest_id,name_en,description_en,is_same_merchant_limit_yn,daily_merchant_limit,min_amount_transaction,reward_stamp,created_time,updated_time,created_by,updated_by,name_bs,description_bs,saver_user_type,tnc_tag,source_of_fund,nominal_type
+IGAME_CASH_DISBURSE,5,Instant cash withdrawal,Max 2 attempts per period,N,0,1000000.00,5,2026-04-09T09:15:04,2026-04-09T09:15:04,system,system,Tarik tunai dana instan,Berlaku dua kali per periode,,instant-cash-terms,,NOMINAL
+IGAME_CASH_OUT,2,Cash Out,Max 1 attempt per period,N,0,150000.00,1,2026-04-09T09:15:04,2026-04-09T09:15:04,system,system,Tarik Tunai,Berlaku satu kali per periode,,,,NOMINAL
+IGAME_CC_BILL_PAY,2,"Credit card 
+bill payment",Max 1 attempt per period,N,0,1000000.00,1,2026-04-09T09:15:04,2026-08-28T16:38:25,system,system,"Bayar tagihan 
+kartu kredit",Maksimum satu kali per periode,,,PRIME,TRANSACTION
+IGAME_DAILY_LOGIN,1,Daily Login,Available once per day,N,0,,1,2026-04-09T09:15:04,2026-08-28T16:38:25,system,system,Login setiap hari,Tersedia satu kali per hari,,,,
+IGAME_DANA_APP,2,Pay at Dana App,"Max 1 attempts per day, 
+up to 10 attempts per period",N,0,50000.00,3,2026-05-18T23:04:54,2026-08-28T16:38:25,system,system,"Bayar di aplikasi 
+DANA","Tersedia 1x per hari, 
+maks. 10x per periode",,,ALL,TRANSACTION
+IGAME_TRANSFER_BANK,2,Transfer to Another Bank,Max 5 attempt per period,N,0,150000.00,1,2026-04-09T09:15:04,2026-09-03T15:46:41,system,system,Transfer ke Bank Lain,Berlaku 5 kali per periode,,,,NOMINAL
+IGAME_PARKING_PAY,2,Use Allo Parking,Max 10 attempt per period,N,0,5000.00,1,2026-04-09T09:15:04,2026-04-09T09:15:04,system,system,Gunakan Allo Parking,Maksimum 10x per periode,,,PRIME,TRANSACTION
+IGAME_PAYLATER_ACT_H,5,"Activate Limit 
+Allo PayLater",Available once per period,N,0,1000000.00,30,2026-04-09T09:15:04,2026-04-09T09:15:04,system,system,"Aktifkan limit
+Allo PayLater",Berlaku satu kali per periode,,,,PAYLATER_UP
+IGAME_PAYLATER_ACT_L,5,"Activate Limit 
+Allo PayLater",Available once per period,N,0,1000000.00,10,2026-04-09T09:15:04,2026-04-09T09:15:04,system,system,"Aktifkan limit
+Allo PayLater",Berlaku satu kali per periode,,,,PAYLATER_DOWN
+IGAME_PAYLATER_UP_B2B,5,Top up limit,Max 2 attempts per period,N,0,500000.00,5,2026-04-09T09:15:04,2026-04-09T09:15:04,system,system,Isi ulang limit,Maksimum 2x per periode,,,,NOMINAL
+IGAME_QR_HUNT_AREA,4,Hunt for QR Code at selected areas,Max 1 attempt per QR,N,0,,2,2026-04-09T09:15:04,2026-04-09T09:15:04,system,system,Cari kode QR di area tertentu,Berlaku satu kali per QR,,,,QR
+IGAME_QR_HUNT_MERCHANT,4,Hunt for QR Code at CT Corp stores,Max 1 attempt per QR,N,0,,2,2026-04-09T09:15:04,2026-04-09T09:15:04,system,system,Cari kode QR di toko-toko CT Corp,Berlaku satu kali per QR,,,,QR
+IGAME_REPAYMENT,5,Repay Allo PayLater,Available once per period,N,0,500000.00,5,2026-04-09T09:15:04,2026-04-09T09:15:04,system,system,Lunasi tagihan Allo PayLater,Berlaku satu kali per periode,,,,TRANSACTION
+IGAME_TOPUP_BALANCE,2,Top Up Balance,Available once per day,N,0,50000.00,1,2026-04-09T09:15:04,2026-04-09T09:15:04,system,system,Tambah saldo,Tersedia satu kali per hari,,,,NOMINAL
+IGAME_UPGRADE_PRIME,1,Upgrade to Allo Prime,Available once per period,N,0,,5,2026-04-09T09:15:04,2026-04-09T09:15:04,system,system,Upgrade ke Allo Prime,Berlaku satu kali per periode,,,,
+IGAME_WEEKLY_BALANCE,1,Keep Weekly Allo Prime Balance,Available once per week,N,0,1000000.00,2,2026-04-09T09:15:04,2026-04-09T09:15:04,system,system,Simpan saldo Allo Prime tiap minggu,Tersedia satu kali per minggu,,,,BALANCE
+IGAME_MULTIFINANCE,2,Multifinance Bill Payment,Max 1 attempt per period,N,0,1000000.00,1,2026-04-09T09:15:04,2026-08-28T16:38:25,system,system,"Bayar tagihan 
+angsuran kredit",Maksimum satu kali per periode,,,PRIME,TRANSACTION
+IGAME_PLN_MTIX_APP,2,Pay at PLN/m-tix app,"Max 1 attempt per day, 
+up to 10 attempts per period",N,0,50000.00,2,2026-04-09T09:15:04,2026-08-28T16:38:25,system,system,"Bayar di aplikasi 
+PLN/m-tix","Tersedia 1x per hari, 
+maks. 10x per periode",,,ALL,TRANSACTION
+IGAME_PLN_TOKEN,2,Top up PLN token or pay PLN postpaid,Max 5 attempts per period,N,0,50000.00,1,2026-04-09T09:15:04,2026-08-28T16:38:25,system,system,Beli token PLN atau bayar PLN pascabayar,Maksimum 5x per periode,,,ALL,TRANSACTION
+IGAME_PULSA_PRABAYAR,2,Top up mobile prepaid,Max 10 attempts per period,N,0,20000.00,1,2026-04-09T09:15:04,2026-08-28T16:38:25,system,system,Beli pulsa,Maksimum 10x per periode,,,ALL,TRANSACTION
+IGAME_QRIS_PAYMENT,2,Pay with QRIS at specific merchant,Max 5 attempts per day,Y,3,50000.00,1,2026-04-09T09:15:04,2026-08-28T16:38:25,system,system,Bayar dengan QRIS di merchant tertentu,Tersedia 5x per hari,,qr-terms,ALL,TRANSACTION
+IGAME_QRIS_PAYMENT_SPECIFIC,4,QRIS Allo Wallet at specific merchant,Max 6 attempts per day,Y,3,50000.00,2,2026-04-09T09:15:04,2026-08-28T16:38:25,system,system,QRIS dengan Allo Wallet di merchant tertentu,Tersedia 6x per hari,,qr-terms,PRIME,TRANSACTION
+IGAME_TOPUP_EWALLET,2,Top up e-wallet,"Max 1 attempt per day, 
+up to 30 attempts per period",N,0,100000.00,1,2026-04-09T09:15:04,2026-08-28T16:38:25,system,system,Isi ulang e-wallet,"Tersedia 1x per hari, 
+maks. 30x per periode",,,PRIME,TRANSACTION
+IGAME_VA_PAYMENT_PAYLATER,5,"VA payment with 
+Allo PayLater",Available once per day,N,0,100000.00,3,2026-04-09T09:15:04,2026-08-28T16:38:25,system,system,"Bayar VA dengan 
+Allo PayLater",Tersedia satu kali per hari,,,PAYLATER,TRANSACTION
+IGAME_VA_PAYMENT_WALLET,2,"VA payment with 
+Allo Wallet",Available once per day,N,0,150000.00,2,2026-04-09T09:15:04,2026-08-28T16:38:25,system,system,"Bayar VA dengan 
+Allo Wallet",Tersedia satu kali per hari,,,PRIME,TRANSACTION
+OPEN_GROW,3,Open Allo Grow,"Max 1 attempt per day, 
+up to 10 attempts per period",N,0,500000.00,3,2026-04-09T09:15:04,2026-08-28T16:38:25,system,system,Buka Allo Grow,"Tersedia satu kali per hari, maks. 10x per periode",ALL,,,
+IGAME_PAKET_DATA,2,Buy mobile data,Max 5 attempts per period,N,0,25000.00,1,2026-04-09T09:15:04,2026-09-03T15:49:02,system,system,Beli paket data,Maksimum 5x per periode,,,ALL,TRANSACTION
+IGAME_QRIS_PAYMENT_PAYLATER,5,QRIS PayLater transaction at selected merchant,Max 5 attempts per day,Y,3,50000.00,3,2026-04-09T09:15:04,2026-09-03T15:53:22,system,system,Pembayaran QRIS PayLater di merchant pilihan ,"Tersedia 5x per hari, maks",,qr-terms,PAYLATER,TRANSACTION
+IGAME_VIRTUAL_DEBIT,2,Pay with Virtual Debit Card,Available 3 times per day,N,0,50000.00,2,2026-04-09T09:15:04,2026-09-03T15:49:41,system,system,Bayar dengan Kartu Debit Virtual,Tersedia 3x per hari,,,,TRANSACTION
+IGAME_WEVERSE_DM,2,Buy Weverse DM,Available once per day,N,0,60000.00,2,2026-08-28T14:26:41,2026-09-03T15:45:44,system,system,Beli Weverse DM,Tersedia satu kali per hari,,,ALL,TRANSACTION
+IGAME_WEVERSE_MEMBERSHIP,2,Buy Weverse Digital Membership,Available once per day,N,0,29000.00,1,2026-08-28T14:26:41,2026-09-03T15:45:44,system,system,Beli Weverse Digital Membership,Tersedia satu kali per hari,,,ALL,TRANSACTION
+OPEN_DEPOSIT,3,Open Allo Deposito,"Max 1 attempt per day, up to 7 attempts per period",N,0,1000000.00,5,2026-04-09T09:15:04,2026-09-03T15:51:13,system,system,Buka Allo Deposit,"Tersedia satu kali per hari, maks. 7x per periode",ALL,,,

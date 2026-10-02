@@ -1,0 +1,27 @@
+<!doctype html>
+<!-- @dsCard group="Brand" name="List rows" subtitle="Transaction-row pattern" viewport="700x220" -->
+<html><head>
+<meta charset="utf-8">
+<title>List rows</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 24px; background: #fff; font-family: var(--font-ui); }
+  .list { background: #fff; border-radius: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); overflow: hidden; }
+  .row { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-bottom: 1px solid #F0F0F0; }
+  .row:last-child { border: 0; }
+  .icon { width: 40px; height: 40px; border-radius: 12px; background: #FFE39B; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 900; color: #333; flex-shrink: 0; }
+  .icon.b { background: #B1B5FF; }
+  .icon.c { background: #B1EFCE; }
+  .body { flex: 1; min-width: 0; }
+  .title { font-size: 15px; font-weight: 500; color: var(--fg-1); margin-bottom: 2px; }
+  .sub { font-size: 12px; color: var(--fg-4); }
+  .amt { font-family: var(--font-display); font-weight: 700; font-size: 15px; color: var(--fg-1); letter-spacing: -0.01em; }
+  .amt.in { color: #1F9D55; }
+</style>
+</head><body>
+  <div class="list">
+    <div class="row"><div class="icon">↑</div><div class="body"><div class="title">Transfer ke Sari</div><div class="sub">BCA · 12 Mei, 14:32</div></div><div class="amt">- Rp 250.000</div></div>
+    <div class="row"><div class="icon b">⚡</div><div class="body"><div class="title">PLN Token</div><div class="sub">Berhasil · 12 Mei</div></div><div class="amt">- Rp 100.000</div></div>
+    <div class="row"><div class="icon c">↓</div><div class="body"><div class="title">Top up dari BCA</div><div class="sub">12 Mei, 09:14</div></div><div class="amt in">+ Rp 1.000.000</div></div>
+  </div>
+</body></html>

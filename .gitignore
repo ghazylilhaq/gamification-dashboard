@@ -34,3 +34,22 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Dashboard local files and generated output
+# Dependencies and build output
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Wrangler local state — the local D1 database lives here. It is a copy of the
+# campaign data on this machine, not something to share.
+.wrangler/
+
+# Local environment overrides
+.dev.vars
+*.local
+.env
+.env.*
+
+# macOS
+.DS_Store

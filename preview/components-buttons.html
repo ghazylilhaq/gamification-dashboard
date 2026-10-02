@@ -1,0 +1,32 @@
+<!doctype html>
+<!-- @dsCard group="Brand" name="Buttons" subtitle="Primary (pill, yellow), secondary, ghost, sizes" viewport="700x180" -->
+<html><head>
+<meta charset="utf-8">
+<title>Buttons</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 24px; background: #fff; font-family: var(--font-ui); }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+  .btn { font-family: var(--font-ui); font-weight: 600; font-size: 15px; padding: 12px 20px; border-radius: 999px; border: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: 150ms cubic-bezier(.2,0,0,1); }
+  .primary { background: #FFAF03; color: #333; box-shadow: 0 8px 20px rgba(255,175,3,0.35); }
+  .secondary { background: #333; color: #fff; }
+  .ghost { background: transparent; color: #333; border: 1.5px solid #333; }
+  .tertiary { background: #FAFAFA; color: #333; }
+  .disabled { background: #E6E6E6; color: #B8B8B8; cursor: not-allowed; }
+  .sm { font-size: 13px; padding: 8px 14px; }
+  .lg { font-size: 17px; padding: 16px 28px; }
+  .label { font-family: var(--font-mono); font-size: 11px; color: var(--fg-4); width: 70px; }
+</style>
+</head><body>
+  <div class="row"><span class="label">primary</span>
+    <button class="btn primary">Buka rekening</button>
+    <button class="btn primary sm">Lanjut</button>
+    <button class="btn primary lg">Top up sekarang</button>
+  </div>
+  <div class="row"><span class="label">secondary</span>
+    <button class="btn secondary">Lihat detail</button>
+    <button class="btn ghost">Batal</button>
+    <button class="btn tertiary">Nanti saja</button>
+    <button class="btn disabled">Disabled</button>
+  </div>
+</body></html>

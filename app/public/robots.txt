@@ -1,0 +1,3 @@
+# Internal dashboard. Nothing here should ever be indexed.
+User-agent: *
+Disallow: /

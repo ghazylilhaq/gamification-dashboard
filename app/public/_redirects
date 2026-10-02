@@ -1,0 +1,3 @@
+# Client-side routing: every non-asset, non-API path serves the app shell so
+# /rewards, /admin/upload and friends work on a hard refresh.
+/*  /index.html  200
