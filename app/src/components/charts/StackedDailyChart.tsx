@@ -13,9 +13,9 @@ export interface StackSeries {
 
 export interface StackPoint {
   date: string;
-  /** One value per series, in series order. */
-  values: number[];
-  /** Replaces the plain date in the tooltip, e.g. to name a partial day. */
+  /** One value per series, in series order. All null: no data for the day, drawn as a gap. */
+  values: Array<number | null>;
+  /** Replaces the plain date in the tooltip, e.g. to name the export window. */
   caption?: string | null;
 }
 
@@ -46,7 +46,8 @@ export function StackedDailyChart({
   const rows = data.map((p) => ({
     date: p.date,
     caption: p.caption ?? null,
-    ...Object.fromEntries(series.map((s, i) => [s.key, p.values[i] ?? 0])),
+    missing: p.values.every((v) => v === null),
+    ...Object.fromEntries(series.map((s, i) => [s.key, p.values[i] ?? null])),
   }));
   const full = format === 'rupiah' ? formatRupiah : formatNumber;
   const compact = format === 'rupiah' ? formatRupiahCompact : formatNumber;
@@ -67,7 +68,15 @@ export function StackedDailyChart({
             cursor={{ fill: 'var(--color-line-2)' }}
             content={({ active, payload, label }) => {
               if (!active || !payload || payload.length === 0) return null;
-              const row = payload[0]?.payload as { caption: string | null } | undefined;
+              const row = payload[0]?.payload as { caption: string | null; missing: boolean } | undefined;
+              if (row?.missing) {
+                return (
+                  <div style={TOOLTIP_STYLE.contentStyle} className="bg-surface-1 px-3 py-2">
+                    <p style={TOOLTIP_STYLE.labelStyle}>{formatDate(String(label))}</p>
+                    <p className="text-ink-4">No export closes this day</p>
+                  </div>
+                );
+              }
               const total = payload.reduce((acc, item) => acc + Number(item.value ?? 0), 0);
               return (
                 <div style={TOOLTIP_STYLE.contentStyle} className="bg-surface-1 px-3 py-2">

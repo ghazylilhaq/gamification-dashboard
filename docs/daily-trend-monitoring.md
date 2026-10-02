@@ -1,6 +1,8 @@
 # Daily trend monitoring — assessment
 
-**Status:** v1 shipped as the **Trends** page (`/trends`), dashboard spec v1.6
+**Status:** v1.1 — the **Trends** page (`/trends`), dashboard spec v1.6. Full
+days only (latest = H-1); snapshot-level charts removed; per-day tables cover
+every date.
 **Question it answers:** *what moved yesterday, and is that normal?*
 
 The existing pages answer "where do we stand" with running totals. Daily
@@ -23,25 +25,26 @@ ladder, claim, and it costs money.
 | 2 | **Newly onboarded** | Discovery. Are users finding the blindbox page? | Onboard Y today − yesterday | `blindbox_reach` (Δ) | Yes, with a daily reach upload |
 | 3 | **Newly eligible** | Users who just earned their first box | Users at ≥ 10 stamps today − yesterday | `blindbox_reach` (Δ) | Yes, with a daily reach upload |
 | 4 | **New users reaching each box** (segmented) | Progression. Which part of the ladder is moving? | Users at box N *or beyond*, today − yesterday, for each of the 12 boxes, split by opened / never opened the page | `blindbox_reach` (Δ) | Yes, with a daily reach upload |
-| 5 | **Users by stamp tier** (segmented) | Mix. Is the base shifting up the ladder? | Users whose highest box falls in each tier, end of day | `blindbox_reach` (level) | Yes |
-| 6 | **Daily logins** (≈ DAU) | Engagement. The closest the exports get to daily active users | Daily Login transactions today − yesterday; the login stamp is once per user per day, so this is users who logged in | `activity_level` (Δ) | Yes, with a daily activity upload |
-| 7 | **Stamp transactions, stamps issued** | Which behaviours drive stamps | Transactions (excluding Daily Login) and stamps, today − yesterday, per activity and per quest | `activity_level` (Δ) | Yes, with a daily activity upload |
-| 8 | **Box claims** | Conversion into rewards | Claims per day, per box and per tier | `daily_claim_rewards` | Yes, already daily |
-| 9 | **Gacha claims, gacha users** | The second reward loop | Claims and users that spun, per day (users not addable across days) | `daily_claim_gatcha` | Yes, already daily |
-| 10 | **Box cashback** | Cost | Claims × configured payout, per day (exact for cashback) | `daily_claim_rewards` | Yes, already daily |
-| 11 | **Coupons redeemed, coupon spend** | Cost — the part the daily spend file has never filled | Cumulative redeemed and spend, today − yesterday | `total_spent_reward` (Δ) | Yes, with a daily total-spend upload |
-| 12 | **Gacha cashback** | Cost | Cashback per day | `daily_claim_gatcha` | Yes, already daily |
+| 5 | **Daily logins** (≈ DAU) | Engagement. The closest the exports get to daily active users | Daily Login transactions today − yesterday; the login stamp is once per user per day, so this is users who logged in | `activity_level` (Δ) | Yes, with a daily activity upload |
+| 6 | **Stamp transactions, stamps issued** | Which behaviours drive stamps | Transactions (excluding Daily Login) and stamps, today − yesterday, per activity and per quest | `activity_level` (Δ) | Yes, with a daily activity upload |
+| 7 | **Box claims** | Conversion into rewards | Claims per day, per box and per tier | `daily_claim_rewards` | Yes, already daily |
+| 8 | **Gacha claims, gacha users** | The second reward loop | Claims and users that spun, per day (users not addable across days) | `daily_claim_gatcha` | Yes, already daily |
+| 9 | **Box cashback** | Cost | Claims × configured payout, per day (exact for cashback) | `daily_claim_rewards` | Yes, already daily |
+| 10 | **Coupons redeemed, coupon spend** | Cost — the part the daily spend file has never filled | Cumulative redeemed and spend, today − yesterday | `total_spent_reward` (Δ) | Yes, with a daily total-spend upload |
+| 11 | **Gacha cashback** | Cost | Cashback per day | `daily_claim_gatcha` | Yes, already daily |
 
 **Not monitored daily, deliberately:** coupon redemption *rate* and stock left %
 are slow-moving ratios. A day-over-day view of them is mostly noise, and they
-are already on Redemption, Rewards and Overview.
+are already on Redemption, Rewards and Overview. Neither are **levels** — how
+many users sit in each tier at a moment. Those are snapshots, not daily
+movement; the Activity page shows the current ladder.
 
 ## 2. Segmentation
 
 Three segment axes are possible with today's exports:
 
-1. **Stamp tier**, from the highest box a user's stamps reach. Five tiers, set in
-   `app/src/config/trends.ts`:
+1. **Stamp tier**: the 12 boxes in five groups, used to stack box claims per
+   day. Set in `app/src/config/trends.ts`:
 
    | Tier | Boxes | Stamps |
    |---|---|---|
@@ -51,13 +54,11 @@ Three segment axes are possible with today's exports:
    | 4 | Visa, Sports Club, Merchandise | 120–209 |
    | 5 | Shared Bites, Seoul, Fancam & Music | 210+ |
 
-   Users under 10 stamps (~300.000, the large majority) are reported as a
-   number rather than a tier: drawn as a band they would flatten everything
-   else.
 2. **Opened the blindbox page or not** (`is_onboard_yn`). Users who have earned
    a box but never opened the page are the campaign's biggest untapped group
    (14.807 on 18 Sep, more than the onboarded eligible users).
-3. **Per box** — the finest grain, shown as a box × day table.
+3. **Per box**: the finest grain, shown as box × day tables of new users
+   reaching each box and of claims.
 
 **How "increase" is measured.** Reach buckets are *exclusive*: each user sits in
 the bucket of the highest box they reach. When a user climbs from box 1 to box 3,
@@ -71,18 +72,29 @@ customers, Prime vs. non-Prime, acquisition channel, and daily *unique* claimers
 
 ## 3. How a daily figure is made
 
-- **Daily files** (claims, gacha) already have one row per calendar day. The
-  export's own day is still running, so it is shown as *today so far* and never
-  compared with a full day.
-- **Cumulative files** (reach, activity, total spend) are totals to date. A
-  day's figure is the difference between that day's last export and the
-  previous day's. It covers export to export, not midnight to midnight.
+**Full days only.** The latest day on the page is the last complete one —
+H-1 when the files are exported just after midnight. A day still running is
+never shown, compared or downloaded.
+
+- **Daily files** (claims, gacha) have one row per calendar day. The day an
+  export is pulled on is still running, so it is left out until the next
+  export.
+- **Cumulative files** (reach, activity, total spend) are totals to date. Each
+  export is read as the closing figure of the day whose midnight is nearest to
+  it: an export at 00:30 on 2 Oct closes **1 Oct**. A day's figure is its
+  closing total minus the day before's. When several exports close the same
+  day, the one nearest midnight is used, so a mid-day re-export does not
+  disturb the daily figures.
+  - Exported just after midnight, every figure is one calendar day. Exported
+    at another time, say 11:04, a day runs 11:04 to 11:04, and the page says
+    so.
   - If a day's export is missing, the next difference covers two days. It is
     shown, labelled "2-day window", and is never used as a baseline or flagged.
+    The day with no export shows as "—".
   - If exports land at very different times (more than ±4 h from 24 h apart),
     the page says so.
-- **Comparisons.** Each metric's latest finished day is compared with the day
-  before and with the mean of up to 7 finished single days before it (at least
+- **Comparisons.** Each metric's latest full day is compared with the day
+  before and with the mean of up to 7 single days before it (at least
   3). A day **30% or more** above or below that mean is flagged *Unusually high
   / low*, unless the mean is under 20. Small numbers swing too much to mean
   anything. All thresholds live in `app/src/config/trends.ts`.
@@ -91,22 +103,21 @@ customers, Prime vs. non-Prime, acquisition channel, and daily *unique* claimers
 
 ## 4. What changed in the dashboard
 
-- **API.** `/api/bootstrap` now also returns the last export of each WIB day for
+- **API.** `/api/bootstrap` now also returns one export per day it closes for
   reach and activity (raw), and for total spend (summed per reward type in SQL —
   105 rows per export would be wasteful). Previously only the latest two exports
   were sent, which is why no day-by-day history was possible. **No schema
   migration**: the history was already being stored, one snapshot per upload.
 - **Trends page**, second in the navigation (and a mobile tab; Blind boxes moved
   under More):
-  1. *Daily scorecard*: all 12 metrics above, with day, value, vs previous day,
+  1. *Daily scorecard*: every metric above, with day, value, vs previous day,
      vs 7-day average, a 14-day sparkline, and the unusual-day flag. CSV download.
-  2. *Users with stamps*: tier mix at the end of each day (stacked), with a
-     Both / Opened the page / Never opened switch, then new users reaching
-     each box per day (box × day table, shaded within each row). CSV download.
-  3. *Box claims per day*: by tier (same colours as above), then box × day. CSV
-     download.
-  4. *Stamps issued per day*: by quest, then each activity's latest day against
-     its previous day and average.
+  2. *New users reaching each box, per day*: box × day table on every date
+     since launch, shaded within each row, with a Both / Opened the page /
+     Never opened switch. CSV download.
+  3. *Box claims per day*: stacked by tier, then box × day. CSV download.
+  4. *Stamps issued per day*: stacked by quest on every date since launch,
+     then activity × day. CSV download.
 - Metrics are pure functions in `app/src/lib/metrics/trends.ts`, tested in
   `app/src/test/trends.test.ts` and `trendsPage.test.tsx`.
 
@@ -115,7 +126,7 @@ customers, Prime vs. non-Prime, acquisition channel, and daily *unique* claimers
 ### Do now — no new data needed
 
 1. **Upload `blindbox_reach`, `activity_level` and `total_spent_reward` every
-   day**, alongside the daily files. Without this, rows 1–7 and 11 stay empty;
+   day**, alongside the daily files. Without this, rows 1–6 and 10 stay empty;
    the page says how many days it has. Two days of uploads give the first
    figure, four give the first baseline, eight a full 7-day baseline.
 2. **Export at the same time every day — ideally just after midnight WIB.**

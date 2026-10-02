@@ -44,5 +44,12 @@ export const UNUSUAL_CHANGE = 0.3;
  */
 export const UNUSUAL_MIN_BASELINE = 20;
 
-/** Days shown in the per-box tables and sparklines. */
-export const TABLE_DAYS = 14;
+/** Days drawn in each scorecard sparkline. The per-day tables show every date. */
+export const SPARK_DAYS = 14;
+
+/**
+ * A snapshot export within this many hours of midnight closes a calendar day
+ * cleanly. Further out, a "day" runs export to export (e.g. 11:04 to 11:04),
+ * and the page says so.
+ */
+export const MIDNIGHT_TOLERANCE_HOURS = 3;

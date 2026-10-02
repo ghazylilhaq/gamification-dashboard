@@ -68,7 +68,11 @@ describe('tables collapse into cards on mobile', () => {
   });
 
   it('Trends has a phone card list beside its scorecard', async () => {
-    const { container } = await renderPage(<Trends />, 'Daily scorecard');
+    // Launch day is still running in the bare fixture, so add full days to
+    // put the per-box tables on screen.
+    stubApi({ extraDays: 3 });
+    const { container } = renderWithProviders(<Trends />);
+    await waitFor(() => expect(screen.getByText('Daily scorecard')).toBeTruthy());
     const scorecard = screen.getByRole('region', { name: 'Daily scorecard' });
     expect(isDesktopOnly(scorecard.querySelector('table'))).toBe(true);
     expect(mobileOnly(scorecard).length).toBeGreaterThan(0);
