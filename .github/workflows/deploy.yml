@@ -1,0 +1,57 @@
+# Publish the dashboard to Cloudflare Pages whenever main changes — the same
+# `wrangler pages deploy` as `npm run deploy`, run from GitHub instead of a
+# laptop. Needs two repository secrets (Settings → Secrets and variables →
+# Actions):
+#
+#   CLOUDFLARE_API_TOKEN   an API token with Account › Cloudflare Pages › Edit
+#                          and Account › D1 › Edit
+#   CLOUDFLARE_ACCOUNT_ID  the account that owns the blindbox-dashboard project
+#
+# Run it by hand from the Actions tab (Deploy → Run workflow) to redeploy main
+# without a new commit. Database migrations are NOT applied here — run
+# `npm run db:migrate:remote` yourself when a change adds one.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deploy at a time; a newer push supersedes one still queued.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Check the Cloudflare secrets are set
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID under Settings → Secrets and variables → Actions, then re-run this workflow."
+            exit 1
+          fi
+        working-directory: .
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      # Never publish a build that fails its own checks.
+      - run: npm test
+      - run: npm run build
+      - name: Deploy to Cloudflare Pages
+        run: npx wrangler pages deploy ./dist --branch main

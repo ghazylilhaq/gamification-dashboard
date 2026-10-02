@@ -48,6 +48,18 @@ export function daysBetween(from: string, to: string): number {
   return Math.round((toUtc(to) - toUtc(from)) / DAY_MS);
 }
 
+/**
+ * Hours between two 'YYYY-MM-DD HH:MM:SS' WIB timestamps. Both sides are the
+ * same wall clock, so reading them as UTC leaves the difference exact.
+ */
+export function hoursBetween(from: string, to: string): number {
+  const ms = (t: string) => {
+    const [h, m, s] = (t.slice(11, 19) || '00:00:00').split(':').map(Number);
+    return toUtc(t) + ((h ?? 0) * 3600 + (m ?? 0) * 60 + (s ?? 0)) * 1000;
+  };
+  return (ms(to) - ms(from)) / 3_600_000;
+}
+
 /** Every date from `from` to `to`, both inclusive. Empty when `to` precedes `from`. */
 export function dateRange(from: string, to: string): string[] {
   const out: string[] = [];

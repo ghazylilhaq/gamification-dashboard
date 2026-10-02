@@ -31,6 +31,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
     const [
       rewardSnapshot, prevRewardSnapshot, spendSnapshot, prevSpendSnapshot,
       activitySnapshot, prevActivitySnapshot, reachSnapshot, prevReachSnapshot,
+      reachHistory, activityHistory, spendHistory,
     ] = await Promise.all([
       snapshotRows(db, 'reward_snapshots', rewardStamps[0]),
       snapshotRows(db, 'reward_snapshots', rewardStamps[1]),
@@ -40,6 +41,29 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
       snapshotRows(db, 'activity_snapshots', activityStamps[1], 'ref_id'),
       snapshotRows(db, 'reach_snapshots', reachStamps[0], 'is_onboard, box_bucket'),
       snapshotRows(db, 'reach_snapshots', reachStamps[1], 'is_onboard, box_bucket'),
+      // Day-by-day history for the Trends page: one export per WIB day.
+      db.prepare(
+        `SELECT snapshot_at, is_onboard, box_bucket, users FROM reach_snapshots
+         WHERE snapshot_at IN (${LATEST_PER_DAY('reach_snapshots')})
+         ORDER BY snapshot_at, is_onboard, box_bucket`,
+      ).all(),
+      db.prepare(
+        `SELECT snapshot_at, ref_id, customers, transactions, stamps_distributed FROM activity_snapshots
+         WHERE snapshot_at IN (${LATEST_PER_DAY('activity_snapshots')})
+         ORDER BY snapshot_at, ref_id`,
+      ).all(),
+      // Spend is 105 rows per export and the trend needs only its totals, so
+      // it is summed here rather than shipped whole.
+      db.prepare(
+        `SELECT snapshot_at, type,
+                SUM(total_user_claimed) AS claimed,
+                SUM(total_user_redeemed) AS redeemed,
+                SUM(spend_amount) AS spend
+         FROM spend_snapshots
+         WHERE snapshot_at IN (${LATEST_PER_DAY('spend_snapshots')})
+         GROUP BY snapshot_at, type
+         ORDER BY snapshot_at, type`,
+      ).all(),
     ]);
 
     return json({
@@ -57,6 +81,9 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
       prevActivitySnapshot,
       reachSnapshot,
       prevReachSnapshot,
+      reachHistory: reachHistory.results,
+      activityHistory: activityHistory.results,
+      spendHistory: spendHistory.results,
       freshness: {
         daily_gacha: firstExportAt(dailyGacha.results),
         daily_rewards: firstExportAt(dailyRewards.results),
@@ -82,6 +109,14 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
     );
   }
 };
+
+/**
+ * The last export of each WIB day in a snapshot table. Timestamps are stored
+ * as 'YYYY-MM-DD HH:MM:SS', so the first ten characters are the day. `table`
+ * is a fixed name from this file, never user input.
+ */
+const LATEST_PER_DAY = (table: string) =>
+  `SELECT MAX(snapshot_at) FROM ${table} GROUP BY substr(snapshot_at, 1, 10)`;
 
 /** The two most recent export timestamps in a snapshot table. */
 async function latestTwo(db: D1Database, table: string): Promise<string[]> {

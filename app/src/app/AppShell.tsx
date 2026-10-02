@@ -128,7 +128,7 @@ function TestDataToggle({
   );
 }
 
-/** Overview, Rewards, Redemption, Gacha, and More for Catalog and Admin. */
+/** The four primary tabs, and More for everything else. */
 function MobileTabBar({ open, onToggleMore }: { open: boolean; onToggleMore: () => void }) {
   const location = useLocation();
   const moreActive = MORE_NAV.some((i) => location.pathname.startsWith(i.to) && i.to !== '/');

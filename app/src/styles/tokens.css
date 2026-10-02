@@ -73,6 +73,36 @@
   --color-chart-5: #4f46e5;   /* coupon spend */
   --color-chart-grid: #ececec;
 
+  /* ---------- trends: stamp tiers (ordinal) ----------
+     One hue, light to dark, because the tiers are ordered: Box 1–2 up to
+     Box 10–12. Checked with the dataviz validator in --ordinal mode against
+     white — monotone lightness, visible steps, the light end clears 2:1. */
+  --color-tier-1: #86b6ef;
+  --color-tier-2: #5598e7;
+  --color-tier-3: #2a78d6;
+  --color-tier-4: #1c5cab;
+  --color-tier-5: #104281;
+
+  /* ---------- trends: quests (categorical) ----------
+     Fixed order, validated for colour-blind separation between neighbours in
+     a stack. Yellow is left out, as everywhere in charts. Quests 3 and 5 sit
+     under 3:1 on white, so the chart is always shown with its table. */
+  --color-quest-1: #2a78d6;
+  --color-quest-2: #eb6834;
+  --color-quest-3: #1baf7a;
+  --color-quest-4: #4a3aa7;
+  --color-quest-5: #e87ba4;
+  --color-quest-other: #b8b8b8;
+
+  /* ---------- trends: heat cells (sequential) ----------
+     The light end of the same blue, so ink-1 text stays readable on every
+     step. Used for "more vs fewer" in the per-box daily tables. */
+  --color-heat-1: #e8f1fd;
+  --color-heat-2: #cde2fb;
+  --color-heat-3: #b7d3f6;
+  --color-heat-4: #9ec5f4;
+  --color-heat-5: #86b6ef;
+
   /* ---------- type ---------- */
   --font-display: 'Satoshi', 'Inter', system-ui, sans-serif;
   --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
