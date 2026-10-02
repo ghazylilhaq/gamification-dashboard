@@ -12,22 +12,24 @@ import { freshnessText } from '@/components/Freshness';
 import { StackedDailyChart } from '@/components/charts/StackedDailyChart';
 import { QUEST_COLORS, TIER_COLORS } from '@/components/charts/chartTheme';
 import { Scorecard } from '@/components/trends/Scorecard';
-import { BoxDayTable } from '@/components/trends/BoxDayTable';
-import { ActivityTrendTable } from '@/components/trends/ActivityTrendTable';
+import { DayTable } from '@/components/trends/DayTable';
 import { windowNote } from '@/components/trends/TrendCells';
+import { MIDNIGHT_TOLERANCE_HOURS } from '@/config/trends';
 import {
-  activityChanges, activityTrends, claimTierSeries, claimsByBoxTable, dailyTrendRows, historyDepth,
-  inRange, irregularWindows, questSeries, reachByBoxTable, reachChanges, reachTierSeries, scorecard,
-  spendChanges, stampsByQuestSeries, tierDefs, trendMetrics, type ReachSegment,
+  activityChanges, claimTierSeries, claimsByBoxTable, dailyTrendRows, historyDepth, hoursFromMidnight,
+  inRange, irregularWindows, questSeries, reachByBoxTable, reachChanges, scorecard, spendChanges,
+  stampsByActivityTable, stampsByQuestSeries, tierDefs, trendMetrics, type ReachSegment,
+  type SnapshotWindow,
 } from '@/lib/metrics/trends';
-import { boxDayColumns, dailyTrendColumns } from '@/lib/csv/columns';
+import { dailyTrendColumns, dayTableColumns } from '@/lib/csv/columns';
 import { csvFileName } from '@/lib/csv/export';
 import { exportName } from '@/lib/csv/exportContext';
-import type { SnapshotWindow } from '@/lib/metrics/trends';
-import { formatDate, formatDateTimeWib, formatNumber, formatTimeWib } from '@/lib/format';
+import { formatDate, formatDateTimeWib, formatTimeWib } from '@/lib/format';
 
 const DESCRIPTION =
-  'What moved each day: new users, how far up the stamp ladder they climb, what they do and claim, and what it costs.';
+  'What moved each full day: new users, how far up the stamp ladder they climb, what they do and claim, and what it costs.';
+
+const BOX_HEADERS = { key: 'box_position', label: 'box_name', detail: 'stamp_required' };
 
 export function Trends() {
   const { dataset, loading, error, reload, raw, filter, hasAnyData } = useDashboard();
@@ -37,6 +39,9 @@ export function Trends() {
     if (!dataset) return null;
     const metrics = trendMetrics(dataset);
     const inView = <W extends { date: string }>(rows: W[]) => rows.filter((w) => inRange(w.date, dataset.filter));
+    const reach = inView(reachChanges(dataset));
+    const activity = inView(activityChanges(dataset));
+    const spend = inView(spendChanges(dataset));
     return {
       rows: scorecard(dataset, metrics),
       csvRows: dailyTrendRows(dataset, metrics),
@@ -46,21 +51,21 @@ export function Trends() {
       claimTiers: claimTierSeries(dataset),
       claimsTable: claimsByBoxTable(dataset),
       stampsByQuest: stampsByQuestSeries(dataset),
-      activity: activityTrends(dataset),
+      stampsTable: stampsByActivityTable(dataset),
       irregular: groupIrregular([
-        { source: 'reach', windows: irregularWindows(inView(reachChanges(dataset))) },
-        { source: 'activity', windows: irregularWindows(inView(activityChanges(dataset))) },
-        { source: 'total spend', windows: irregularWindows(inView(spendChanges(dataset))) },
+        { source: 'reach', windows: irregularWindows(reach) },
+        { source: 'activity', windows: irregularWindows(activity) },
+        { source: 'total spend', windows: irregularWindows(spend) },
       ]),
+      // The latest export of any snapshot source, if it is far from midnight.
+      offMidnight: ([reach, activity, spend] as SnapshotWindow[][])
+        .map((w) => w[w.length - 1])
+        .find((w): w is SnapshotWindow =>
+          w !== undefined && Math.abs(hoursFromMidnight(w.at)) > MIDNIGHT_TOLERANCE_HOURS) ?? null,
     };
   }, [dataset]);
 
-  const reach = useMemo(
-    () => (dataset
-      ? { levels: reachTierSeries(dataset, segment), table: reachByBoxTable(dataset, segment) }
-      : null),
-    [dataset, segment],
-  );
+  const reachTable = useMemo(() => (dataset ? reachByBoxTable(dataset, segment) : null), [dataset, segment]);
 
   if (loading) {
     return (
@@ -72,22 +77,24 @@ export function Trends() {
     );
   }
   if (error) return <ErrorState message={error} onRetry={reload} />;
-  if (!dataset || !raw || !data || !reach) return null;
+  if (!dataset || !raw || !data || !reachTable) return null;
   if (!hasAnyData) return <FirstRun page="Daily trends" />;
 
-  const { rows, csvRows, depth, tiers, quests, claimTiers, claimsTable, stampsByQuest, activity, irregular } = data;
+  const {
+    rows, csvRows, depth, tiers, quests, claimTiers, claimsTable, stampsByQuest, stampsTable, irregular, offMidnight,
+  } = data;
   const tierSeries = tiers.map((t, i) => ({
     key: `t${i}`,
     label: t.stamps ? `${t.label} · ${t.stamps}` : t.label,
     color: TIER_COLORS[i] ?? 'var(--color-tier-5)',
   }));
-  const questChartSeries = quests.map((q) => ({ ...q, color: QUEST_COLORS[q.key] ?? QUEST_COLORS.other! }));
+  const questColour = (key: string | undefined) => QUEST_COLORS[key ?? 'other'] ?? QUEST_COLORS.other!;
+  const questChartSeries = quests.map((q) => ({ ...q, color: questColour(q.key) }));
   const shortHistory = [
     { label: 'blindbox_reach', days: depth.reach },
     { label: 'activity_level', days: depth.activity },
     { label: 'total_spent_reward', days: depth.spend },
   ].filter((s) => s.days < 2);
-  const latestLevel = reach.levels[reach.levels.length - 1];
   const segmentLabel = REACH_VIEWS.find((v) => v.id === segment)?.label ?? 'Both';
 
   return (
@@ -103,9 +110,20 @@ export function Trends() {
           <DataNote tone="info">
             <strong>Day-over-day figures from the cumulative exports need two days of them.</strong>{' '}
             So far: {shortHistory.map((s) => `${s.label} ${s.days} day${s.days === 1 ? '' : 's'}`).join(', ')}.
-            Upload these with the daily files every day, at about the same time, and the user, activity
+            Upload these with the daily files every day, just after midnight, and the user, activity
             and coupon rows fill in on their own. Claims and gacha come from daily exports and are
             already complete.
+          </DataNote>
+        )}
+        {offMidnight && (
+          <DataNote tone="info">
+            <strong>
+              Snapshot days run from {formatTimeWib(offMidnight.at)} to {formatTimeWib(offMidnight.at)}, not
+              midnight to midnight.
+            </strong>{' '}
+            The cumulative exports were taken at {formatTimeWib(offMidnight.at)}, so each day&apos;s users,
+            stamps and coupons are counted export to export. Export them just after midnight WIB and
+            every figure here becomes a full calendar day.
           </DataNote>
         )}
         {irregular.length > 0 && (
@@ -127,7 +145,7 @@ export function Trends() {
       <Card label="Daily scorecard">
         <SectionHeader
           title="Daily scorecard"
-          description="Each metric's latest full day, against the day before and the 7 days before that. A day 30% or more away from its average is flagged."
+          description="Each metric's latest full day (H-1), against the day before and the 7 days before that. A day 30% or more away from its average is flagged."
           freshness={freshnessText(raw.freshness, ['reach', 'activity', 'claims', 'gacha', 'spend'])}
           action={
             <DownloadButton
@@ -137,106 +155,78 @@ export function Trends() {
             />
           }
         />
-        <Scorecard rows={rows} freshness={raw.freshness} />
+        <Scorecard rows={rows} />
         <p className="mt-3 text-micro text-ink-4">
-          Users, activity and coupons are the change between one day&apos;s export and the next, so a
-          day runs export to export rather than midnight to midnight. Claims, gacha and cashback come
-          straight from the daily exports; their latest day is still running and is shown as
-          &ldquo;today so far&rdquo; without being compared.
+          Full days only: the day an export is pulled is still running, so it is left out until the
+          next export. Users, activity and coupons are the change in the cumulative exports from one
+          day to the next; claims, gacha and cashback come straight from the daily exports.
         </p>
       </Card>
 
-      <Card label="Users with stamps" className="mt-4">
+      <Card label="New users reaching each box" className="mt-4">
         <SectionHeader
-          title="Users with stamps, by how far they have climbed"
-          description="Users at the end of each day, grouped by the highest box their stamps reach"
+          title="New users reaching each box, per day"
+          description="Users whose stamps reached the box or beyond that day. Someone who jumps two boxes counts in both rows."
           freshness={freshnessText(raw.freshness, ['reach'])}
           action={
-            <SegmentedControl
-              legend="Which users"
-              options={REACH_VIEWS.map((v) => ({ value: v.id, label: v.label }))}
-              selected={segment}
-              onChange={setSegment}
-              className="flex-wrap"
-            />
+            <div className="flex flex-wrap items-center gap-2">
+              <SegmentedControl
+                legend="Which users"
+                options={REACH_VIEWS.map((v) => ({ value: v.id, label: v.label }))}
+                selected={segment}
+                onChange={setSegment}
+                className="flex-wrap"
+              />
+              <DownloadButton
+                fileName={csvFileName('new-users-by-box', [segment === 'all' ? null : segmentLabel, filter.to])}
+                columns={dayTableColumns(reachTable, { ...BOX_HEADERS, total: 'reached_total' })}
+                rows={reachTable.columns.length > 0 ? reachTable.rows : []}
+              />
+            </div>
           }
         />
-        {latestLevel && (
-          <p className="mb-3 text-micro text-ink-4">
-            Not drawn: <span className="font-semibold text-ink-2 tnum">{formatNumber(latestLevel.belowFirst)}</span>{' '}
-            users under 10 stamps on {formatDate(latestLevel.date)} — at that size they would flatten every
-            tier above them.
-          </p>
-        )}
-        <StackedDailyChart
-          series={tierSeries}
-          data={reach.levels.map((d) => ({
-            date: d.date,
-            values: d.tiers,
-            caption: `End of ${formatDate(d.date)} · export ${formatTimeWib(d.at)}`,
-          }))}
-          emptyTitle="No reach export in this range"
-          emptyDescription="Upload blindbox_reach daily to see users move up the ladder."
-        />
-
-        <div className="mt-6 flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h3 className="font-display font-bold text-ink-1">New users reaching each box, per day</h3>
-            <p className="mt-0.5 text-ink-3">
-              Users whose stamps reached the box or beyond that day. Someone who jumps two boxes counts
-              in both rows.
-            </p>
-          </div>
-          <DownloadButton
-            fileName={csvFileName('new-users-by-box', [segment === 'all' ? null : segmentLabel, filter.to])}
-            columns={boxDayColumns(reach.table, 'reached_total')}
-            rows={reach.table.columns.length > 0 ? reach.table.rows : []}
-          />
-        </div>
         {segment === 'N' && (
-          <p className="mt-2 text-micro text-ink-4">
+          <p className="mb-3 text-micro text-ink-4">
             Users leave this view when they open the blindbox page, so a box&apos;s figure can fall.
           </p>
         )}
-        <div className="mt-3">
-          <BoxDayTable
-            table={reach.table}
-            label="New users reaching each box, per day"
-            totalLabel="Reached"
-            emptyTitle="Needs two days of reach exports"
-            emptyDescription="Each day's increase is the difference between two daily blindbox_reach exports."
-          />
-        </div>
+        <DayTable
+          table={reachTable}
+          label="New users reaching each box, per day"
+          rowHeader="Box"
+          totalLabel="Reached"
+          detailNote="Numbers beside box names are stamps required."
+          emptyTitle="Needs two days of reach exports"
+          emptyDescription="Each day's increase is the difference between two daily blindbox_reach exports."
+        />
       </Card>
 
       <Card label="Box claims per day" className="mt-4">
         <SectionHeader
           title="Box claims per day"
-          description="Grouped by the same tiers as above, then per box"
+          description="By stamp tier, then per box"
           freshness={freshnessText(raw.freshness, ['claims'])}
           action={
             <DownloadButton
               fileName={exportName('claims-by-box', filter)}
-              columns={boxDayColumns(claimsTable, 'claims_since_launch')}
+              columns={dayTableColumns(claimsTable, { ...BOX_HEADERS, total: 'claims_since_launch' })}
               rows={claimsTable.columns.length > 0 ? claimsTable.rows : []}
             />
           }
         />
         <StackedDailyChart
           series={tierSeries}
-          data={claimTiers.map((d) => ({
-            date: d.date,
-            values: d.tiers,
-            caption: `${formatDate(d.date)}${d.partial ? ` · partial day, as of ${formatTimeWib(raw.freshness.daily_rewards)}` : ''}`,
-          }))}
-          emptyTitle="No claims in this range"
+          data={claimTiers.map((d) => ({ date: d.date, values: d.tiers }))}
+          emptyTitle="No full days of claims in this range"
         />
         <div className="mt-6">
-          <BoxDayTable
+          <DayTable
             table={claimsTable}
             label="Box claims per box, per day"
+            rowHeader="Box"
             totalLabel="Since launch"
-            emptyTitle="No claims in this range"
+            detailNote="Numbers beside box names are stamps required."
+            emptyTitle="No full days of claims in this range"
           />
         </div>
       </Card>
@@ -244,25 +234,40 @@ export function Trends() {
       <Card label="Stamps issued per day" className="mt-4">
         <SectionHeader
           title="Stamps issued per day"
-          description="By quest, then per activity. Daily Login is part of the Starter Quest."
+          description="Every day, by quest, then per activity. Daily Login is part of the Starter Quest."
           freshness={freshnessText(raw.freshness, ['activity'])}
+          action={
+            <DownloadButton
+              fileName={exportName('stamps-by-activity', filter)}
+              columns={dayTableColumns(stampsTable, { key: 'activity_id', label: 'activity', detail: 'quest', total: 'stamps_to_date' })}
+              rows={stampsTable.columns.length > 0 ? stampsTable.rows : []}
+            />
+          }
         />
         <StackedDailyChart
           series={questChartSeries}
           data={stampsByQuest.map((d) => ({
-            date: d.window.date,
+            date: d.date,
             values: d.values,
-            caption: `${formatDateTimeWib(d.window.prevAt)} → ${formatDateTimeWib(d.window.at)}`,
+            caption: d.window ? `${formatDateTimeWib(d.window.prevAt)} → ${formatDateTimeWib(d.window.at)}` : null,
           }))}
           emptyTitle="Needs two days of activity exports"
           emptyDescription="Each day's stamps are the difference between two daily activity_level exports."
         />
-        {activity.length > 0 && (
-          <div className="mt-6">
-            <h3 className="mb-3 font-display font-bold text-ink-1">Activities on their latest day</h3>
-            <ActivityTrendTable rows={activity} />
-          </div>
-        )}
+        <div className="mt-6">
+          <h3 className="mb-3 font-display font-bold text-ink-1">Stamps per activity, per day</h3>
+          <DayTable
+            table={stampsTable}
+            label="Stamps per activity, per day"
+            rowHeader="Activity"
+            totalLabel="To date"
+            detailNote="Beside each activity: its quest."
+            marker={(row) => questColour(stampsTable.questOf.get(row.key))}
+            collapseAfter={10}
+            emptyTitle="Needs two days of activity exports"
+            emptyDescription="Each day's stamps are the difference between two daily activity_level exports."
+          />
+        </div>
       </Card>
 
       <p className="mt-4 text-micro text-ink-4">

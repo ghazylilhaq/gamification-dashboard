@@ -1,27 +1,18 @@
 import { Fragment } from 'react';
-import type { Freshness } from '@/lib/types';
-import type { ScorecardRow, TrendGroup, TrendSource } from '@/lib/metrics/trends';
-import { formatTimeWib } from '@/lib/format';
+import type { ScorecardRow, TrendGroup } from '@/lib/metrics/trends';
 import { Table, TableWrap, Td, Th } from '../ui/Table';
 import { Sparkline } from './Sparkline';
 import { BaselineCell, ChangeCell, DayCell, formatValue } from './TrendCells';
 
 const GROUPS: TrendGroup[] = ['Users', 'Activity', 'Claims', 'Cost'];
 
-/** Export time behind a partial day, by source. Only daily files have partial days. */
-function partialAsOf(source: TrendSource, freshness: Freshness): string | null {
-  if (source === 'claims') return freshness.daily_rewards;
-  if (source === 'gacha') return freshness.daily_gacha;
-  return null;
-}
-
 /**
- * Every daily metric on one screen: its latest finished day, the change from
+ * Every daily metric on one screen: its latest full day (H-1), the change from
  * the day before, how that day compares with the week before it, and the
  * shape of the last two weeks. Grouped as the campaign funnel reads — users,
  * what they do, what they claim, what it costs.
  */
-export function Scorecard({ rows, freshness }: { rows: ScorecardRow[]; freshness: Freshness }) {
+export function Scorecard({ rows }: { rows: ScorecardRow[] }) {
   return (
     <>
       <div className="hidden md:block">
@@ -63,7 +54,6 @@ export function Scorecard({ rows, freshness }: { rows: ScorecardRow[]; freshness
                           <span className="font-semibold text-ink-1">
                             {row.latest ? formatValue(row.latest.value, row.metric.format) : '—'}
                           </span>
-                          <PartialLine row={row} freshness={freshness} />
                         </Td>
                         <Td align="right"><ChangeCell change={row.vsPrevious} format={row.metric.format} /></Td>
                         <Td align="right"><BaselineCell row={row} format={row.metric.format} /></Td>
@@ -97,7 +87,6 @@ export function Scorecard({ rows, freshness }: { rows: ScorecardRow[]; freshness
                         <p className="font-display text-lg font-bold text-ink-1">
                           {row.latest ? formatValue(row.latest.value, row.metric.format) : '—'}
                         </p>
-                        <PartialLine row={row} freshness={freshness} />
                       </div>
                     </div>
                     <div className="mt-2 flex items-end justify-between gap-3 text-micro">
@@ -115,17 +104,5 @@ export function Scorecard({ rows, freshness }: { rows: ScorecardRow[]; freshness
         })}
       </div>
     </>
-  );
-}
-
-/** "Today so far" for a day still in progress — shown, never compared. */
-function PartialLine({ row, freshness }: { row: ScorecardRow; freshness: Freshness }) {
-  if (!row.partial) return null;
-  const asOf = partialAsOf(row.metric.source, freshness);
-  return (
-    <span className="block whitespace-nowrap text-micro text-ink-4">
-      today so far {formatValue(row.partial.value, row.metric.format)}
-      {asOf && <> · {formatTimeWib(asOf)}</>}
-    </span>
   );
 }

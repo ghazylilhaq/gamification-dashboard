@@ -454,8 +454,10 @@ unreadable on white.
 - **Ladder conversion needs same-day exports.** Claims ÷ reached is withheld
   unless the claims and reach files share a WIB date.
 - **Daily figures from cumulative exports are differences, measured on what
-  only grows.** Trends takes the last export of each WIB day and subtracts the
-  previous day's. Per-box increases use "reached box N or beyond", never a
+  only grows.** Trends reads each export as the close of the day whose
+  midnight is nearest to it (00:30 on 2 Oct closes 1 Oct), keeps the one
+  nearest midnight per day, and subtracts the previous day's. Only full days
+  are shown: the day a daily file is pulled on is left out. Per-box increases use "reached box N or beyond", never a
   reach bucket on its own: buckets are exclusive, so a bucket shrinks as its
   users climb. A difference spanning a missed day is shown but never used as a
   baseline or flagged as unusual.

@@ -7,7 +7,7 @@ import type { GachaPoint } from '@/lib/metrics/gacha';
 import type { DailyClaimPoint } from '@/lib/metrics/claims';
 import type { ActivityRow } from '@/lib/metrics/activity';
 import type { ReachFunnelStep } from '@/lib/metrics/reach';
-import { TREND_METRICS, type BoxDayTable, type BoxDayRow, type DailyTrendRow } from '@/lib/metrics/trends';
+import { TREND_METRICS, type DayRow, type DayTable, type DailyTrendRow } from '@/lib/metrics/trends';
 
 /**
  * Column definitions for every export.
@@ -209,26 +209,29 @@ export const reachColumns: CsvColumn<ReachExportRow>[] = [
   { header: 'claim_rate_approximate', value: (r) => r.claimRateApproximate },
 ];
 
-/** Every daily metric as a column, one row per day — the Trends scorecard's data. */
+/** Every daily metric as a column, one row per full day — the Trends scorecard's data. */
 export const dailyTrendColumns: CsvColumn<DailyTrendRow>[] = [
   { header: 'date', value: (r) => r.date },
   ...TREND_METRICS.map((m): CsvColumn<DailyTrendRow> => ({ header: m.csv, value: (r) => r.values[m.id] ?? null })),
-  { header: 'partial_day', value: (r) => r.partial },
 ];
 
 /**
- * A per-box daily table as shown: one row per box, one column per day, then
- * the running total. Built per table, because the days are the columns.
+ * A per-day table as shown: one row per box or activity, one column per day,
+ * then the running total. Built per table, because the days are the columns.
+ * A day no export closes is left blank, not written as 0.
  */
-export function boxDayColumns(table: BoxDayTable, totalHeader: string): CsvColumn<BoxDayRow>[] {
+export function dayTableColumns(
+  table: DayTable,
+  headers: { key: string; label: string; detail: string; total: string },
+): CsvColumn<DayRow>[] {
   return [
-    { header: 'box_position', value: (r) => r.box },
-    { header: 'box_name', value: (r) => r.name },
-    { header: 'stamp_required', value: (r) => r.stampRequired },
-    ...table.columns.map((c, i): CsvColumn<BoxDayRow> => ({
-      header: c.spanDays > 1 ? `${c.date} (${c.spanDays} days)` : c.partial ? `${c.date} (partial)` : c.date,
+    { header: headers.key, value: (r) => r.key },
+    { header: headers.label, value: (r) => r.label },
+    { header: headers.detail, value: (r) => r.detail },
+    ...table.columns.map((c, i): CsvColumn<DayRow> => ({
+      header: c.spanDays > 1 && !c.missing ? `${c.date} (${c.spanDays} days)` : c.date,
       value: (r) => r.values[i] ?? null,
     })),
-    { header: totalHeader, value: (r) => r.total },
+    { header: headers.total, value: (r) => r.total },
   ];
 }

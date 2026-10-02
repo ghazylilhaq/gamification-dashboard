@@ -45,20 +45,17 @@ describe('Trends page — launch-day fixture only', () => {
     expect(screen.getByText('Needs two days of reach exports')).toBeTruthy();
   });
 
-  it('shows launch day as still running rather than comparing it', async () => {
+  it('shows full days only — launch day was still running when the files were pulled', async () => {
     await renderTrends();
-    const card = region('Daily scorecard');
-    expect(within(card).getAllByText(/today so far 1\.991 · 12:36 WIB/).length).toBeGreaterThan(0);
-    expect(within(card).getAllByText(/today so far 1\.279 · 12:19 WIB/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/today so far/)).toBeNull();
+    const claims = region('Box claims per day');
+    expect(within(claims).getAllByText('No full days of claims in this range').length).toBe(2);
   });
 
-  it('still draws the levels and claims it has', async () => {
+  it('no longer charts users by tier', async () => {
     await renderTrends();
-    // Users under 10 stamps are stated rather than drawn.
-    expect(screen.getByText('297.473')).toBeTruthy();
-    const claims = screen.getByRole('table', { name: 'Box claims per box, per day' });
-    expect(within(claims).getByText('Welcome Box')).toBeTruthy();
-    expect(within(claims).getAllByText('814').length).toBe(2);
+    expect(screen.queryByText(/by how far they have climbed/)).toBeNull();
+    expect(screen.queryByText(/users under 10 stamps/)).toBeNull();
   });
 });
 
@@ -70,42 +67,52 @@ describe('Trends page — with ten days of daily exports', () => {
     expect(screen.queryByText(/cover more or less than 24 hours/)).toBeNull();
   });
 
-  it('reports the latest day\'s new users, as computed from the history', async () => {
+  it('says a day runs export to export when exports are not taken at midnight', async () => {
+    await renderTrends(WITH_HISTORY);
+    // The fixture's reach export is from 11:04.
+    expect(screen.getByText(/Snapshot days run from 11:04 WIB to 11:04 WIB/)).toBeTruthy();
+  });
+
+  it('reports the latest full day\'s new users, as computed from the history', async () => {
     const boot = await renderTrends(WITH_HISTORY);
     const expected = scorecard(buildDataset(boot)).find((r) => r.metric.id === 'newUsers')!.latest!;
-    expect(expected.date).toBe('2026-09-28');
+    // The last export, 28 Sep 11:04, closes 27 Sep: H-1.
+    expect(expected.date).toBe('2026-09-27');
     const card = region('Daily scorecard');
     expect(within(card).getAllByText(formatNumber(expected.value)).length).toBeGreaterThan(0);
   });
 
-  it('shows ten days of new users per box, twelve boxes deep', async () => {
+  it('shows new users per box on every date since launch, with gaps before the first export', async () => {
     await renderTrends(WITH_HISTORY);
     const table = screen.getByRole('table', { name: 'New users reaching each box, per day' });
-    const header = table.querySelectorAll('thead th');
-    // Box name, ten days, then the total.
-    expect(header.length).toBe(12);
+    // Box name, 15–27 Sep, then the total.
+    expect(table.querySelectorAll('thead th').length).toBe(15);
     expect(table.querySelectorAll('tbody tr').length).toBe(12);
+    // 15–17 Sep: no export closes them yet.
+    const welcome = table.querySelector('tbody tr')!;
+    expect(within(welcome as HTMLElement).getAllByText('—').length).toBe(3);
   });
 
   it('switches the user view, and says why the never-opened figures can fall', async () => {
     await renderTrends(WITH_HISTORY);
     const user = userEvent.setup();
-    const card = region('Users with stamps');
+    const card = region('New users reaching each box');
     expect(within(card).queryByText(/Users leave this view/)).toBeNull();
     await user.click(within(card).getByRole('button', { name: 'Never opened' }));
     expect(within(card).getByRole('button', { name: 'Never opened' }).getAttribute('aria-pressed')).toBe('true');
     expect(within(card).getByText(/Users leave this view when they open the blindbox page/)).toBeTruthy();
   });
 
-  it('lists the busiest activities first and expands to all of them', async () => {
+  it('tabulates stamps per activity for every date, busiest first, and expands to all', async () => {
     await renderTrends(WITH_HISTORY);
     const user = userEvent.setup();
     const card = region('Stamps issued per day');
-    const rowsBefore = card.querySelectorAll('tbody tr').length;
-    expect(rowsBefore).toBe(10);
-    expect(within(card.querySelector('tbody')!).getAllByText('Daily Login').length).toBe(1);
-    await user.click(within(card).getByRole('button', { name: /Show all 31 activities/ }));
-    expect(card.querySelectorAll('tbody tr').length).toBe(31);
+    const table = within(card).getByRole('table', { name: 'Stamps per activity, per day' });
+    expect(table.querySelectorAll('thead th').length).toBe(15);
+    expect(table.querySelectorAll('tbody tr').length).toBe(10);
+    expect(within(table.querySelector('tbody tr') as HTMLElement).getByText('Daily Login')).toBeTruthy();
+    await user.click(within(card).getByRole('button', { name: 'Show all 31' }));
+    expect(table.querySelectorAll('tbody tr').length).toBe(31);
   });
 
   it('offers the scorecard data as a CSV', async () => {
