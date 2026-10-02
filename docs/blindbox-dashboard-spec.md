@@ -1,6 +1,6 @@
 # Allo Blind Box Season 2 — Monitoring Dashboard Spec
 
-**Status:** Draft v1.5 — activity and reach exports added; User onboard now automatic
+**Status:** Draft v1.6 — Trends page for daily monitoring (see `daily-trend-monitoring.md`)
 **Audience:** Leadership and the internal team
 **Launch date:** 15 Sep 2026 (all data before this date is test data and is excluded by default)
 **Devices:** Desktop and mobile
@@ -263,6 +263,26 @@ users reached) is shown **only when the claims and reach exports share a WIB
 date**; otherwise both dates are stated and conversion is withheld. It still
 assumes one claim per user per box (§3, to confirm).
 
+### Page 1c — Trends (new in v1.6)
+
+Daily monitoring: what moved each day, and whether that is normal. Full
+reasoning in `daily-trend-monitoring.md`.
+
+- **Daily scorecard.** New users with a stamp, newly onboarded, newly eligible,
+  daily logins (≈ DAU), stamp transactions, stamps issued, box claims, gacha
+  claims and users, box cashback, coupons redeemed, coupon spend, gacha
+  cashback. Each shows its latest finished day, vs the previous day, vs the mean
+  of up to 7 days before (≥ 3 needed), and a 14-day sparkline. ±30% from the
+  mean is flagged unless the mean is under 20. A day still running is shown as
+  "today so far", never compared.
+- **Users with stamps by tier** (Box 1–2, 3–4, 5–6, 7–9, 10–12) at the end of
+  each day, switchable between both / opened the page / never opened; then new
+  users reaching each box per day, as a box × day table.
+- **Box claims per day** by the same tiers, then box × day.
+- **Stamps issued per day** by quest, then each activity's latest day.
+- Snapshot sources give a day's figure as the difference between consecutive
+  daily exports, so reach, activity and total spend must be uploaded **daily**.
+
 ### Page 4 — Budget (new in v1.4)
 
 **The most important view.** What the campaign has cost, and how fast.
@@ -303,7 +323,7 @@ assumes one claim per user per box (§3, to confirm).
 - Charts use the full width.
 - The stamp ladder becomes vertical.
 - Tables collapse into cards showing name, stock bar, claimed/redeemed, and spend.
-- Navigation moves to a bottom tab bar (Overview, Activity, Blind boxes, Rewards, More). Budget, Redemption, Gacha and Admin sit under More.
+- Navigation moves to a bottom tab bar (Overview, Trends, Activity, Rewards, More). Blind boxes, Budget, Redemption, Gacha and Admin sit under More.
 
 ---
 
@@ -510,3 +530,14 @@ reproduce exactly.
 | No unique user count | 318,463 unique users with any stamp, from reach's exclusive buckets |
 | — | Activity tab: reach funnel, stamps by quest, all 32 activities |
 | Seven upload file types | Ten: `activity_level_`, `blindbox_reach_` (regular), `activity_list_` (reference) |
+
+---
+
+## 11. Changes in v1.6
+
+| Was | Now |
+|---|---|
+| Only the latest two snapshots reached the UI | `/api/bootstrap` also returns the last export of each day for reach, activity and total spend (spend summed per type) |
+| No day-by-day view of users, activity or coupons | Trends page: daily scorecard, users by stamp tier, new users per box per day, claims per box per day, stamps by quest |
+| Daily coupon cost unavailable (§2.4) | Recovered as the day-over-day change in `total_spent_reward`, when it is uploaded daily |
+| Mobile tabs: Overview, Activity, Blind boxes, Rewards | Overview, Trends, Activity, Rewards; Blind boxes under More |

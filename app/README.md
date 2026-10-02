@@ -37,7 +37,7 @@ pass `--remote` or run `deploy`.
 | `npm run dev` | Local dev, Vite + API. Builds once first so `dist/` exists. |
 | `npm run build` | Typecheck, then build to `dist/`. |
 | `npm run preview` | Build and serve the built app on `:8788` exactly as Pages will. |
-| `npm test` | The full suite (333 tests), run against the real CSVs in `../docs`. |
+| `npm test` | The full suite (401 tests), run against the real CSVs in `../docs`. |
 | `npm run typecheck` | `tsc --noEmit`. |
 | `npm run seed` | Migrate + load `../docs/*.csv` into local D1. Re-runnable. |
 | `npm run db:reset` | Delete the local database and re-migrate. |
@@ -85,6 +85,12 @@ safe to delete once no archived exports use it.
 export timestamp are read out of the name
 (`…_2026-09-15T13_51_34.335429+07_00.csv` → `2026-09-15 13:51:34` WIB). A renamed
 file with no timestamp is rejected rather than guessed at.
+
+**Upload reach, activity and total spend every day, too.** They are cumulative,
+so the Trends page gets each day's figure — new users, logins, stamps, coupons
+redeemed — from the difference between one day's export and the next. Missing a
+day merges two days into one figure; the page labels it, but it cannot be split
+back out. See [`../docs/daily-trend-monitoring.md`](../docs/daily-trend-monitoring.md).
 
 ### Replace vs snapshot
 
@@ -351,7 +357,7 @@ prefers an Access identity when one is present, and the allowlist still applies.
 
 ```
 functions/api/            Pages Functions
-  bootstrap.ts            GET  everything the UI reads, in one call
+  bootstrap.ts            GET  everything the UI reads, in one call (incl. one snapshot per day for trends)
   publish.ts              POST daily publish (partial allowed)
   reference.ts            POST box + reward reference replace
   uploads.ts              GET upload history
@@ -362,7 +368,7 @@ src/lib/csv/              detect · validate · parse (the two renames)
 src/lib/metrics/          pure functions, one module per concern (budget.ts owns cost)
 src/lib/sql.ts            literal encoding for bulk inserts
 src/components/           UI primitives, charts, shared panels
-src/pages/                Overview · Activity · Blind boxes · Rewards · Budget · Redemption · Gacha · Admin
+src/pages/                Overview · Trends · Activity · Blind boxes · Rewards · Budget · Redemption · Gacha · Admin
 src/test/                 the suite, run against ../docs/*.csv
 migrations/               0001 core schema · 0002 activity and reach
 scripts/seed.ts           local D1 loader
@@ -433,6 +439,12 @@ unreadable on white.
   people repeatedly (568.304 vs ~318.463). The Activity page shows only the first.
 - **Ladder conversion needs same-day exports.** Claims ÷ reached is withheld
   unless the claims and reach files share a WIB date.
+- **Daily figures from cumulative exports are differences, measured on what
+  only grows.** Trends takes the last export of each WIB day and subtracts the
+  previous day's. Per-box increases use "reached box N or beyond", never a
+  reach bucket on its own: buckets are exclusive, so a bucket shrinks as its
+  users climb. A difference spanning a missed day is shown but never used as a
+  baseline or flagged as unusual.
 - **All times are WIB (UTC+7).** Nothing is stored as UTC — `src/lib/time.ts`
   formats server-written timestamps in Jakarta time.
 

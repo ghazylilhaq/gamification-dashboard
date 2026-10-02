@@ -1,5 +1,5 @@
 import type { Dataset } from './dataset';
-import type { ReachSnapshot } from '@/lib/types';
+import type { ReachHistoryRow } from '@/lib/types';
 
 /**
  * How far users are up the stamp ladder, from blindbox_reach.
@@ -51,7 +51,8 @@ export interface ReachTotals {
   change: { activeUsers: number; onboardY: number; untappedEligible: number } | null;
 }
 
-function countsOf(rows: ReachSnapshot[]) {
+/** Users per bucket, split by onboard flag. Shared with the daily trends. */
+export function countsOf(rows: ReachHistoryRow[]) {
   const y = new Map<number, number>();
   const n = new Map<number, number>();
   for (const row of rows) {
@@ -61,13 +62,14 @@ function countsOf(rows: ReachSnapshot[]) {
   return { y, n };
 }
 
-function atLeast(counts: Map<number, number>, box: number): number {
+/** Users whose highest box is `box` or beyond. Box 0 counts everyone. */
+export function atLeast(counts: Map<number, number>, box: number): number {
   let total = 0;
   for (const [bucket, users] of counts) if (bucket >= box) total += users;
   return total;
 }
 
-function totalsOf(rows: ReachSnapshot[]) {
+function totalsOf(rows: ReachHistoryRow[]) {
   const { y, n } = countsOf(rows);
   const onboardY = atLeast(y, 0);
   const onboardN = atLeast(n, 0);

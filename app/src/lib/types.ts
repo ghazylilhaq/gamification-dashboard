@@ -132,6 +132,18 @@ export interface ReachSnapshot {
   users: number;
 }
 
+/** A reach row as kept in the day-by-day history: the raw label is dropped. */
+export type ReachHistoryRow = Pick<ReachSnapshot, 'snapshot_at' | 'is_onboard' | 'box_bucket' | 'users'>;
+
+/** One spend export summed per reward type — all the daily trend needs from it. */
+export interface SpendHistoryRow {
+  snapshot_at: string;
+  type: string;
+  claimed: number;
+  redeemed: number;
+  spend: number;
+}
+
 export interface PageVisitors {
   id: number;
   value: number;
@@ -172,6 +184,14 @@ export interface Bootstrap {
   prevActivitySnapshot: ActivitySnapshot[];
   reachSnapshot: ReachSnapshot[];
   prevReachSnapshot: ReachSnapshot[];
+  /**
+   * The last export of each WIB day, oldest first, for the daily trends. The
+   * snapshot exports are cumulative, so a day's movement is the difference
+   * between consecutive days.
+   */
+  reachHistory: ReachHistoryRow[];
+  activityHistory: ActivitySnapshot[];
+  spendHistory: SpendHistoryRow[];
   freshness: Freshness;
 }
 

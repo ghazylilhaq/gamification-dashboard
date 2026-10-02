@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/states';
  * extra request costs.
  */
 const Overview = lazy(() => import('@/pages/Overview').then((m) => ({ default: m.Overview })));
+const Trends = lazy(() => import('@/pages/Trends').then((m) => ({ default: m.Trends })));
 const Activity = lazy(() => import('@/pages/Activity').then((m) => ({ default: m.Activity })));
 const Budget = lazy(() => import('@/pages/Budget').then((m) => ({ default: m.Budget })));
 const Rewards = lazy(() => import('@/pages/Rewards').then((m) => ({ default: m.Rewards })));
@@ -29,6 +30,7 @@ export function App() {
         <Routes>
           <Route element={<AppShell />}>
             <Route path="/" element={<Lazy><Overview /></Lazy>} />
+            <Route path="/trends" element={<Lazy><Trends /></Lazy>} />
             <Route path="/activity" element={<Lazy><Activity /></Lazy>} />
             <Route path="/budget" element={<Lazy><Budget /></Lazy>} />
             <Route path="/rewards" element={<Lazy><Rewards /></Lazy>} />

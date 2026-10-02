@@ -8,17 +8,18 @@ export interface NavItem {
 }
 
 /**
- * Reading order: where the campaign stands, then the activity that earns
- * stamps, then the boxes those stamps unlock, the rewards inside them, what it
- * all costs, and the two narrower views.
+ * Reading order: where the campaign stands, how that is moving day by day,
+ * then the activity that earns stamps, the boxes those stamps unlock, the
+ * rewards inside them, what it all costs, and the two narrower views.
  *
- * The mobile bar has five slots, so the first four are primary and the rest sit
- * under "More".
+ * The mobile bar has five slots: four primary tabs and "More". Trends is read
+ * daily, so it takes a tab; Blind boxes is a reference view and moves to More.
  */
 export const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Overview', primary: true },
+  { to: '/trends', label: 'Trends', primary: true },
   { to: '/activity', label: 'Activity', primary: true },
-  { to: '/catalog', label: 'Blind boxes', primary: true },
+  { to: '/catalog', label: 'Blind boxes', primary: false },
   { to: '/rewards', label: 'Rewards', primary: true },
   { to: '/budget', label: 'Budget', primary: false },
   { to: '/redemption', label: 'Redemption', primary: false },
