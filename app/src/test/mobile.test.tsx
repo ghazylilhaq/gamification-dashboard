@@ -9,7 +9,6 @@ import { Gacha } from '@/pages/Gacha';
 import { Catalog } from '@/pages/Catalog';
 import { Budget } from '@/pages/Budget';
 import { Activity } from '@/pages/Activity';
-import { Trends } from '@/pages/Trends';
 import { AdminUpload } from '@/pages/AdminUpload';
 import { renderWithProviders, stubApi } from './setup';
 
@@ -65,20 +64,6 @@ describe('tables collapse into cards on mobile', () => {
     const { container } = await renderPage(<Activity />, 'Activity');
     expect(isDesktopOnly(container.querySelector('table'))).toBe(true);
     expect(mobileOnly(container).length).toBeGreaterThan(0);
-  });
-
-  it('Trends has a phone card list beside its scorecard', async () => {
-    // Launch day is still running in the bare fixture, so add full days to
-    // put the per-box tables on screen.
-    stubApi({ extraDays: 3 });
-    const { container } = renderWithProviders(<Trends />);
-    await waitFor(() => expect(screen.getByText('Daily scorecard')).toBeTruthy());
-    const scorecard = screen.getByRole('region', { name: 'Daily scorecard' });
-    expect(isDesktopOnly(scorecard.querySelector('table'))).toBe(true);
-    expect(mobileOnly(scorecard).length).toBeGreaterThan(0);
-    // The per-box tables keep their grid on phones and scroll instead.
-    const perBox = container.querySelector('table[aria-label="Box claims per box, per day"]');
-    expect(perBox?.closest('[class*="overflow-x-auto"]')).toBeTruthy();
   });
 
   it('Budget has a phone card list beside its breakdown table', async () => {
@@ -159,7 +144,6 @@ describe('nothing forces the page to scroll sideways', () => {
     ['Overview', <Overview />, 'Stamp ladder'],
     ['Budget', <Budget />, 'Budget'],
     ['Activity', <Activity />, 'Activity'],
-    ['Trends', <Trends />, 'Daily scorecard'],
     ['Rewards', <Rewards />, 'Rewards'],
     ['Redemption', <Redemption />, 'Redemption'],
     ['Gacha', <Gacha />, 'Gacha'],

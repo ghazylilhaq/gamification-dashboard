@@ -29,24 +29,16 @@ export interface HarnessOptions {
    * window — the budget projection above all.
    */
   extraDays?: number;
-  /**
-   * Add this many daily exports of reach, activity and total spend after the
-   * fixture's own, each a little higher than the last — the history the
-   * Trends page needs, which the fixture (one export of each) does not have.
-   */
-  historyDays?: number;
 }
 
 export function stubApi(options: HarnessOptions = {}): Bootstrap {
   const boot = loadFixtureBootstrap();
   if (options.withoutReach) {
     boot.reachSnapshot = [];
-    boot.reachHistory = [];
     boot.freshness.reach_snapshot = null;
   }
   if (options.withoutActivity) {
     boot.activitySnapshot = [];
-    boot.activityHistory = [];
     boot.activities = [];
     boot.freshness.activity_snapshot = null;
   }
@@ -68,30 +60,6 @@ export function stubApi(options: HarnessOptions = {}): Bootstrap {
     boot.dailySpend = boot.dailySpend.concat(
       days.flatMap((d) => boot.dailySpend.map((r) => ({ ...r, date: shift(r.date, d) }))),
     );
-  }
-
-  if (options.historyDays) {
-    const later = (at: string, days: number) =>
-      `${new Date(Date.UTC(+at.slice(0, 4), +at.slice(5, 7) - 1, +at.slice(8, 10) + days)).toISOString().slice(0, 10)}${at.slice(10)}`;
-    // Each day a little higher than the last, so every cumulative figure rises.
-    const grow = (n: number, day: number) => Math.round(n * (1 + 0.05 * day));
-    const days = [...Array(options.historyDays).keys()].map((i) => i + 1);
-    boot.reachHistory = boot.reachHistory.concat(days.flatMap((d) => boot.reachHistory.map((r) =>
-      ({ ...r, snapshot_at: later(r.snapshot_at, d), users: grow(r.users, d) }))));
-    boot.activityHistory = boot.activityHistory.concat(days.flatMap((d) => boot.activityHistory.map((r) => ({
-      ...r,
-      snapshot_at: later(r.snapshot_at, d),
-      customers: grow(r.customers, d),
-      transactions: grow(r.transactions, d),
-      stamps_distributed: grow(r.stamps_distributed, d),
-    }))));
-    boot.spendHistory = boot.spendHistory.concat(days.flatMap((d) => boot.spendHistory.map((r) => ({
-      ...r,
-      snapshot_at: later(r.snapshot_at, d),
-      claimed: grow(r.claimed, d),
-      redeemed: grow(r.redeemed, d),
-      spend: grow(r.spend, d),
-    }))));
   }
 
   const payload = {

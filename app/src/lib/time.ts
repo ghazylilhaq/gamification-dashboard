@@ -48,25 +48,6 @@ export function daysBetween(from: string, to: string): number {
   return Math.round((toUtc(to) - toUtc(from)) / DAY_MS);
 }
 
-/**
- * Hours between two 'YYYY-MM-DD HH:MM:SS' WIB timestamps. Both sides are the
- * same wall clock, so reading them as UTC leaves the difference exact.
- */
-export function hoursBetween(from: string, to: string): number {
-  return (wallMs(to) - wallMs(from)) / 3_600_000;
-}
-
-/** '2026-10-02 00:30:00' − 12 → '2026-10-01 12:30:00'. Wall clock in, wall clock out. */
-export function addHours(timestamp: string, hours: number): string {
-  return new Date(wallMs(timestamp) + hours * 3_600_000).toISOString().slice(0, 19).replace('T', ' ');
-}
-
-/** A 'YYYY-MM-DD HH:MM:SS' wall-clock time as milliseconds, read as UTC. */
-function wallMs(timestamp: string): number {
-  const [h, m, s] = (timestamp.slice(11, 19) || '00:00:00').split(':').map(Number);
-  return toUtc(timestamp) + ((h ?? 0) * 3600 + (m ?? 0) * 60 + (s ?? 0)) * 1000;
-}
-
 /** Every date from `from` to `to`, both inclusive. Empty when `to` precedes `from`. */
 export function dateRange(from: string, to: string): string[] {
   const out: string[] = [];

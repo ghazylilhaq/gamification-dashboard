@@ -24,10 +24,6 @@ export function loadFixtureBootstrap(): Bootstrap {
   const exportAtOf = (type: FileTypeId) =>
     files.find((f) => f.def.id === type)?.exportAt ?? null;
 
-  const reachSnapshot = rowsOf<Bootstrap['reachSnapshot'][number]>('reach_snapshot');
-  const activitySnapshot = rowsOf<Bootstrap['activitySnapshot'][number]>('activity_snapshot');
-  const spendSnapshot = rowsOf<Bootstrap['spendSnapshot'][number]>('spend_snapshot');
-
   return {
     boxes: rowsOf<Bootstrap['boxes'][number]>('blindbox'),
     rewards: rowsOf<Bootstrap['rewards'][number]>('blindbox_reward'),
@@ -36,19 +32,13 @@ export function loadFixtureBootstrap(): Bootstrap {
     dailySpend: rowsOf<Bootstrap['dailySpend'][number]>('daily_spend'),
     rewardSnapshot: rowsOf<Bootstrap['rewardSnapshot'][number]>('reward_snapshot'),
     prevRewardSnapshot: [],
-    spendSnapshot,
+    spendSnapshot: rowsOf<Bootstrap['spendSnapshot'][number]>('spend_snapshot'),
     prevSpendSnapshot: [],
     activities: rowsOf<Bootstrap['activities'][number]>('activity_list'),
-    activitySnapshot,
+    activitySnapshot: rowsOf<Bootstrap['activitySnapshot'][number]>('activity_snapshot'),
     prevActivitySnapshot: [],
-    reachSnapshot,
+    reachSnapshot: rowsOf<Bootstrap['reachSnapshot'][number]>('reach_snapshot'),
     prevReachSnapshot: [],
-    // One export of each, so one day of history: enough to render the Trends
-    // page's levels, not yet any day-over-day change.
-    reachHistory: reachSnapshot.map(({ snapshot_at, is_onboard, box_bucket, users }) =>
-      ({ snapshot_at, is_onboard, box_bucket, users })),
-    activityHistory: activitySnapshot,
-    spendHistory: summariseSpend(spendSnapshot),
     freshness: {
       daily_gacha: exportAtOf('daily_gacha'),
       daily_rewards: exportAtOf('daily_rewards'),
@@ -63,20 +53,6 @@ export function loadFixtureBootstrap(): Bootstrap {
       prev_reach_snapshot: null,
     },
   };
-}
-
-/** What /api/bootstrap's spend history query returns: one export summed per type. */
-export function summariseSpend(rows: Bootstrap['spendSnapshot']): Bootstrap['spendHistory'] {
-  const out = new Map<string, Bootstrap['spendHistory'][number]>();
-  for (const r of rows) {
-    const key = `${r.snapshot_at}|${r.type}`;
-    const entry = out.get(key) ?? { snapshot_at: r.snapshot_at, type: r.type, claimed: 0, redeemed: 0, spend: 0 };
-    entry.claimed += r.total_user_claimed;
-    entry.redeemed += r.total_user_redeemed;
-    entry.spend += r.spend_amount;
-    out.set(key, entry);
-  }
-  return [...out.values()];
 }
 
 /** Turn normalised value arrays back into objects keyed by column name. */

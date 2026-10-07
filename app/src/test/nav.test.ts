@@ -4,7 +4,7 @@ import { NAV_ITEMS, PRIMARY_NAV, MORE_NAV } from '@/app/nav';
 describe('navigation', () => {
   it('runs in the agreed reading order', () => {
     expect(NAV_ITEMS.map((i) => i.label)).toEqual([
-      'Overview', 'Trends', 'Activity', 'Blind boxes', 'Rewards', 'Budget', 'Redemption', 'Gacha', 'Admin',
+      'Overview', 'Activity', 'Blind boxes', 'Rewards', 'Budget', 'Redemption', 'Gacha', 'Admin',
     ]);
   });
 
@@ -12,12 +12,12 @@ describe('navigation', () => {
     // A fifth primary item would push "More" off the five-slot bar.
     expect(PRIMARY_NAV).toHaveLength(4);
     expect(PRIMARY_NAV.map((i) => i.label)).toEqual([
-      'Overview', 'Trends', 'Activity', 'Rewards',
+      'Overview', 'Activity', 'Blind boxes', 'Rewards',
     ]);
   });
 
   it('puts the narrower views and the team area under More', () => {
-    expect(MORE_NAV.map((i) => i.label)).toEqual(['Blind boxes', 'Budget', 'Redemption', 'Gacha', 'Admin']);
+    expect(MORE_NAV.map((i) => i.label)).toEqual(['Budget', 'Redemption', 'Gacha', 'Admin']);
   });
 
   it('marks only the internal-team area as admin', () => {

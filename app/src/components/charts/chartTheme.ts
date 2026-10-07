@@ -14,40 +14,6 @@ export const CHART = {
   axis: 'var(--color-ink-4)',
 } as const;
 
-/**
- * Daily trends. Spelled out in full rather than built from an index: Tailwind
- * only emits a theme variable whose name appears literally in the source, so
- * `var(--color-tier-${i})` would resolve to nothing.
- */
-
-/** Stamp tiers, light to dark — an ordinal ramp, one hue. */
-export const TIER_COLORS = [
-  'var(--color-tier-1)',
-  'var(--color-tier-2)',
-  'var(--color-tier-3)',
-  'var(--color-tier-4)',
-  'var(--color-tier-5)',
-] as const;
-
-/** Quests, by the key questSeries gives them. The colour follows the quest. */
-export const QUEST_COLORS: Record<string, string> = {
-  q1: 'var(--color-quest-1)',
-  q2: 'var(--color-quest-2)',
-  q3: 'var(--color-quest-3)',
-  q4: 'var(--color-quest-4)',
-  q5: 'var(--color-quest-5)',
-  other: 'var(--color-quest-other)',
-};
-
-/** Heat-table shading, fewer to more. */
-export const HEAT_COLORS = [
-  'var(--color-heat-1)',
-  'var(--color-heat-2)',
-  'var(--color-heat-3)',
-  'var(--color-heat-4)',
-  'var(--color-heat-5)',
-] as const;
-
 export const AXIS_PROPS = {
   stroke: CHART.axis,
   tick: { fill: 'var(--color-ink-4)', fontSize: 11 },

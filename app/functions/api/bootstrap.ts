@@ -31,7 +31,6 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
     const [
       rewardSnapshot, prevRewardSnapshot, spendSnapshot, prevSpendSnapshot,
       activitySnapshot, prevActivitySnapshot, reachSnapshot, prevReachSnapshot,
-      reachHistory, activityHistory, spendHistory,
     ] = await Promise.all([
       snapshotRows(db, 'reward_snapshots', rewardStamps[0]),
       snapshotRows(db, 'reward_snapshots', rewardStamps[1]),
@@ -41,29 +40,6 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
       snapshotRows(db, 'activity_snapshots', activityStamps[1], 'ref_id'),
       snapshotRows(db, 'reach_snapshots', reachStamps[0], 'is_onboard, box_bucket'),
       snapshotRows(db, 'reach_snapshots', reachStamps[1], 'is_onboard, box_bucket'),
-      // Day-by-day history for the Trends page: one export per day it closes.
-      db.prepare(
-        `SELECT snapshot_at, is_onboard, box_bucket, users FROM reach_snapshots
-         WHERE snapshot_at IN (${CLOSING_EXPORTS('reach_snapshots')})
-         ORDER BY snapshot_at, is_onboard, box_bucket`,
-      ).all(),
-      db.prepare(
-        `SELECT snapshot_at, ref_id, customers, transactions, stamps_distributed FROM activity_snapshots
-         WHERE snapshot_at IN (${CLOSING_EXPORTS('activity_snapshots')})
-         ORDER BY snapshot_at, ref_id`,
-      ).all(),
-      // Spend is 105 rows per export and the trend needs only its totals, so
-      // it is summed here rather than shipped whole.
-      db.prepare(
-        `SELECT snapshot_at, type,
-                SUM(total_user_claimed) AS claimed,
-                SUM(total_user_redeemed) AS redeemed,
-                SUM(spend_amount) AS spend
-         FROM spend_snapshots
-         WHERE snapshot_at IN (${CLOSING_EXPORTS('spend_snapshots')})
-         GROUP BY snapshot_at, type
-         ORDER BY snapshot_at, type`,
-      ).all(),
     ]);
 
     return json({
@@ -81,9 +57,6 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
       prevActivitySnapshot,
       reachSnapshot,
       prevReachSnapshot,
-      reachHistory: reachHistory.results,
-      activityHistory: activityHistory.results,
-      spendHistory: spendHistory.results,
       freshness: {
         daily_gacha: firstExportAt(dailyGacha.results),
         daily_rewards: firstExportAt(dailyRewards.results),
@@ -109,24 +82,6 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
     );
   }
 };
-
-/**
- * One export per day it closes, from a snapshot table. An export closes the
- * day whose midnight is nearest to it — `date(snapshot_at, '-12 hours')` —
- * so 00:30 on 2 Oct closes 1 Oct. When several close the same day, the one
- * nearest that midnight wins. Must match snapshotDays() in
- * src/lib/metrics/trends.ts. `table` is a fixed name from this file, never
- * user input.
- */
-const CLOSING_EXPORTS = (table: string) => `
-  SELECT snapshot_at FROM (
-    SELECT snapshot_at, ROW_NUMBER() OVER (
-      PARTITION BY date(snapshot_at, '-12 hours')
-      ORDER BY abs(julianday(snapshot_at) - julianday(date(snapshot_at, '-12 hours', '+1 day'))),
-               snapshot_at DESC
-    ) AS pick
-    FROM (SELECT DISTINCT snapshot_at FROM ${table})
-  ) WHERE pick = 1`;
 
 /** The two most recent export timestamps in a snapshot table. */
 async function latestTwo(db: D1Database, table: string): Promise<string[]> {
