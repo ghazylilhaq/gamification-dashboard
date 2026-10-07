@@ -4,6 +4,7 @@ import { FirstRun } from '@/components/FirstRun';
 import { Card, SectionHeader } from '@/components/ui/Card';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { FilterChips } from '@/components/ui/FilterChips';
+import { SearchInput } from '@/components/ui/SearchInput';
 import { SortSelect } from '@/components/ui/SortSelect';
 import { ChangeCell, Table, TableWrap, Td, Th } from '@/components/ui/Table';
 import { RarityBadge, TypeBadge, NeutralBadge } from '@/components/ui/Badge';
@@ -13,6 +14,8 @@ import { DataNote, EmptyState, ErrorState, LoadingKpis, Skeleton } from '@/compo
 import { freshnessText } from '@/components/Freshness';
 import { rewardRows, topByClaims, topBySpend, type RewardRow } from '@/lib/metrics/rewards';
 import { useTableSort, type SortColumns } from '@/hooks/useTableSort';
+import { useSearch } from '@/lib/search';
+import { useSearchHandoff } from '@/hooks/useSearchHandoff';
 import { formatNumber, formatPercent, formatRupiah } from '@/lib/format';
 import { DownloadButton } from '@/components/DownloadButton';
 import { rewardColumns } from '@/lib/csv/columns';
@@ -45,13 +48,27 @@ export function Rewards() {
   const { dataset, loading, error, reload, raw, hasAnyData, filter } = useDashboard();
   const [boxId, setBoxId] = useState<number | null>(null);
   const [type, setType] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+
+  // Arriving from the global search with a reward already in mind.
+  useSearchHandoff((handoff) => {
+    if (handoff.query !== undefined) setQuery(handoff.query);
+  });
 
   const all = useMemo(() => (dataset ? rewardRows(dataset) : []), [dataset]);
 
-  const matching = useMemo(
+  const chipped = useMemo(
     () => all.filter((r) => (boxId === null || r.boxId === boxId) && (type === null || r.type === type)),
     [all, boxId, type],
   );
+
+  const matching = useSearch(chipped, query, (r) => [
+    r.name,
+    r.rewardId,
+    r.boxName,
+    r.rarity,
+    r.type,
+  ]);
 
   const sort = useTableSort(matching, SORT_COLUMNS, { key: 'stock' }, (r) => r.name);
   const filtered = sort.rows;
@@ -90,6 +107,15 @@ export function Rewards() {
 
       <Card label="Reward filters" className="mb-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:gap-8">
+          {/* Counts on the chips stay on the unfiltered list: a count that
+              moved as you typed would be unreadable. */}
+          <SearchInput
+            value={query}
+            onChange={setQuery}
+            placeholder="Reward name, ID, merchant…"
+            hint={query === '' ? undefined : `${formatNumber(filtered.length)} of ${formatNumber(all.length)} rewards`}
+            className="sm:w-56 lg:w-64"
+          />
           <FilterChips
             legend="Box"
             options={boxOptions}
@@ -106,7 +132,7 @@ export function Rewards() {
 
       <Card label="All rewards">
         <SectionHeader
-          title={boxId === null && type === null ? 'All rewards' : `${formatNumber(filtered.length)} rewards`}
+          title={boxId === null && type === null && query === '' ? 'All rewards' : `${formatNumber(filtered.length)} rewards`}
           description={`Sorted by ${sort.summary} · click a column header to change it`}
           freshness={freshnessText(raw.freshness, ['claims', 'spend'])}
           action={
@@ -114,6 +140,7 @@ export function Rewards() {
               fileName={exportName('rewards', filter, [
                 boxId === null ? null : dataset.boxById.get(boxId)?.name_en,
                 type?.toLowerCase(),
+                query === '' ? null : `matching-${query}`,
               ])}
               columns={rewardColumns}
               rows={filtered}
@@ -145,7 +172,11 @@ export function Rewards() {
         ) : filtered.length === 0 ? (
           <EmptyState
             title="No rewards match these filters"
-            description="Clear the box or type filter to see the full list."
+            description={
+              query === ''
+                ? 'Clear the box or type filter to see the full list.'
+                : `Nothing matches “${query}”. Clear the search or the box and type filters to see the full list.`
+            }
           />
         ) : (
           <>

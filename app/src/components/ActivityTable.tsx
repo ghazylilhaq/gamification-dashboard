@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ActivityRow } from '@/lib/metrics/activity';
 import { useTableSort, type SortColumns } from '@/hooks/useTableSort';
+import { useSearch } from '@/lib/search';
 import { FilterChips } from './ui/FilterChips';
+import { SearchInput } from './ui/SearchInput';
 import { SortSelect } from './ui/SortSelect';
 import { Table, TableWrap, Td, Th } from './ui/Table';
 import { NeutralBadge, WarningBadge } from './ui/Badge';
@@ -29,8 +31,15 @@ export type ActivitySortKey =
 const perCustomer = (v: number | null) =>
   v === null ? '—' : new Intl.NumberFormat('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(v);
 
+/** How the visible rows were narrowed, so a filename can say so. */
+export interface ActivityScope {
+  quest: string | null;
+  query: string;
+}
+
 /**
- * Every activity, filterable by quest group and sortable on any measure.
+ * Every activity, searchable by name, filterable by quest group and sortable
+ * on any measure.
  *
  * Customers are drawn as a bar because the spread is the point — Daily Login
  * reaches ~315.000 people, most activities a few thousand — and a column of
@@ -41,11 +50,16 @@ const perCustomer = (v: number | null) =>
  */
 export function ActivityTable({
   rows,
+  query,
+  onQueryChange,
   onVisibleRowsChange,
 }: {
   rows: ActivityRow[];
+  /** The search term, owned by the page so the global search can set it. */
+  query: string;
+  onQueryChange: (query: string) => void;
   /** Reports the filtered, sorted rows, so an export can match the screen. */
-  onVisibleRowsChange?: (rows: ActivityRow[], quest: string | null) => void;
+  onVisibleRowsChange?: (rows: ActivityRow[], scope: ActivityScope) => void;
 }) {
   const [questId, setQuestId] = useState<number | null>(null);
 
@@ -62,10 +76,12 @@ export function ActivityTable({
       .map(([value, { label, count }]) => ({ value, label: label.replace(/ Quest$/, ''), count }));
   }, [rows]);
 
-  const filtered = useMemo(
+  const chipped = useMemo(
     () => (questId === null ? rows : rows.filter((r) => r.questId === questId)),
     [rows, questId],
   );
+
+  const filtered = useSearch(chipped, query, (r) => [r.name, r.id, r.quest]);
 
   const sort = useTableSort(filtered, SORT_COLUMNS, { key: 'stamps' }, (r) => r.name);
   const visible = sort.rows;
@@ -73,8 +89,8 @@ export function ActivityTable({
   // Keep the parent's export in step with what is on screen.
   const questName = questId === null ? null : rows.find((r) => r.questId === questId)?.quest ?? null;
   useEffect(() => {
-    onVisibleRowsChange?.(visible, questName);
-  }, [visible, questName, onVisibleRowsChange]);
+    onVisibleRowsChange?.(visible, { quest: questName, query });
+  }, [visible, questName, query, onVisibleRowsChange]);
 
   const maxCustomers = Math.max(...visible.map((r) => r.customers), 1);
   const visibleStamps = visible.reduce((t, r) => t + r.stamps, 0);
@@ -82,20 +98,31 @@ export function ActivityTable({
   return (
     <>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <SearchInput
+          value={query}
+          onChange={onQueryChange}
+          placeholder="Activity name or ID…"
+          className="w-full sm:w-56"
+        />
+
         <FilterChips legend="Group" options={quests} selected={questId} onChange={setQuestId} allLabel="All groups" />
 
         {/* Phones have no column headers to click, so sorting gets a control. */}
         <SortSelect sort={sort} />
       </div>
 
-      {questId !== null && visible.length > 0 && (
+      {(questId !== null || query !== '') && visible.length > 0 && (
         <p className="mb-3 text-micro text-ink-3">
-          {formatNumber(visible.length)} activities · {formatNumber(visibleStamps)} stamps issued in this group
+          {formatNumber(visible.length)} activities · {formatNumber(visibleStamps)} stamps issued
+          {questId !== null && query === '' ? ' in this group' : ' in this view'}
         </p>
       )}
 
       {visible.length === 0 ? (
-        <EmptyState title="No activities in this group" />
+        <EmptyState
+          title={query === '' ? 'No activities in this group' : `Nothing matches “${query}”`}
+          description={query === '' ? undefined : 'Clear the search or the group filter to see every activity.'}
+        />
       ) : (
         <>
           <div className="hidden md:block">

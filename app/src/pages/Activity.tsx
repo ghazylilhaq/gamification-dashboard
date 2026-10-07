@@ -7,7 +7,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { KpiCard } from '@/components/KpiCard';
 import { DownloadButton } from '@/components/DownloadButton';
 import { REACH_VIEWS, ReachLadder, type ReachView } from '@/components/ReachLadder';
-import { ActivityTable } from '@/components/ActivityTable';
+import { ActivityTable, type ActivityScope } from '@/components/ActivityTable';
 import type { ActivityRow } from '@/lib/metrics/activity';
 import { stampLadder } from '@/lib/metrics/claims';
 import { DataNote, EmptyState, ErrorState, LoadingKpis, Skeleton } from '@/components/ui/states';
@@ -17,17 +17,24 @@ import { activityRows, activityTotals, hasActivityData } from '@/lib/metrics/act
 import { activityColumns, reachColumns } from '@/lib/csv/columns';
 import { csvFileName } from '@/lib/csv/export';
 import { formatNumber, formatPercent } from '@/lib/format';
+import { useSearchHandoff } from '@/hooks/useSearchHandoff';
 
 export function Activity() {
   const { dataset, loading, error, reload, raw, hasAnyData } = useDashboard();
   const [view, setView] = useState<ReachView>('all');
   // What the activity table currently shows, so its CSV matches the screen.
   const [tableRows, setTableRows] = useState<ActivityRow[] | null>(null);
-  const [tableQuest, setTableQuest] = useState<string | null>(null);
-  const onTableChange = useCallback((visible: ActivityRow[], quest: string | null) => {
+  const [tableScope, setTableScope] = useState<ActivityScope>({ quest: null, query: '' });
+  const onTableChange = useCallback((visible: ActivityRow[], scope: ActivityScope) => {
     setTableRows(visible);
-    setTableQuest(quest);
+    setTableScope(scope);
   }, []);
+  // The table's search term lives here so the global search can set it.
+  const [query, setQuery] = useState('');
+
+  useSearchHandoff((handoff) => {
+    if (handoff.query !== undefined) setQuery(handoff.query);
+  });
 
   const data = useMemo(() => {
     if (!dataset) return null;
@@ -199,11 +206,15 @@ export function Activity() {
         <Card label="All activities" className="mt-4">
           <SectionHeader
             title="All activities"
-            description="Filter by group, sort by any column. Customers are drawn as bars; transactions per customer shows which activities people repeat."
+            description="Search by name, filter by group, sort by any column. Customers are drawn as bars; transactions per customer shows which activities people repeat."
             freshness={freshnessText(raw.freshness, ['activity'])}
             action={
               <DownloadButton
-                fileName={csvFileName('activity', [tableQuest, totals.asOf?.slice(0, 10)])}
+                fileName={csvFileName('activity', [
+                  tableScope.quest,
+                  tableScope.query === '' ? null : `matching-${tableScope.query}`,
+                  totals.asOf?.slice(0, 10),
+                ])}
                 columns={activityColumns}
                 rows={tableRows ?? rows}
               />
@@ -232,7 +243,12 @@ export function Activity() {
             )}
           </div>
 
-          <ActivityTable rows={rows} onVisibleRowsChange={onTableChange} />
+          <ActivityTable
+            rows={rows}
+            query={query}
+            onQueryChange={setQuery}
+            onVisibleRowsChange={onTableChange}
+          />
         </Card>
       )}
     </>

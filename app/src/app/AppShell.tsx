@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { MORE_NAV, NAV_ITEMS, PRIMARY_NAV } from './nav';
 import { FreshnessLine } from '@/components/Freshness';
 import { DateRangePicker } from '@/components/DateRangePicker';
+import { GlobalSearch } from '@/components/GlobalSearch';
 import { useDashboard } from '@/hooks/useDashboard';
 
 export function AppShell() {
@@ -30,6 +31,7 @@ export function AppShell() {
             </p>
 
             <div className="ml-auto flex items-center gap-2 sm:gap-3">
+              <GlobalSearch className="hidden sm:block sm:w-56 lg:w-72" />
               <div className="hidden sm:block">
                 <DateRangePicker />
               </div>
@@ -45,7 +47,9 @@ export function AppShell() {
             </div>
           </div>
 
-          <div className="sm:hidden pb-2">
+          {/* On a phone the header row is full, so these stack beneath it. */}
+          <div className="space-y-2 pb-2 sm:hidden">
+            <GlobalSearch />
             <DateRangePicker />
           </div>
 
