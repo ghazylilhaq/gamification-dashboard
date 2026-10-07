@@ -216,13 +216,10 @@ describe('Redemption page', () => {
     expect(first).toContain('Rp45.000');
   });
 
-  it('leaves out the daily chart entirely when the export has no coupon data', async () => {
+  it('leaves the daily trend to the Blind boxes page', async () => {
     await renderPage(<Redemption />, 'Redemption');
-    expect(screen.getByText(/The daily export has no coupon data to plot/)).toBeTruthy();
-    expect(screen.getByText(/reads 0 claimed and 0 redeemed/)).toBeTruthy();
-    expect(screen.getByText('No daily breakdown available')).toBeTruthy();
-    // A flat-zero chart would read as "nothing happened", so none is drawn.
-    expect(region('Daily redemption').querySelector('.recharts-wrapper')).toBeNull();
+    expect(screen.queryByText('Daily trend', { selector: 'h2' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Daily trend' })).toBeNull();
   });
 
   it('cautions that per-box rates swing on tiny claim counts', async () => {
@@ -315,11 +312,53 @@ describe('Blind boxes page', () => {
     expect(textOf(card)).toContain('lowest 67%');
   });
 
-  it('puts the stamp ladder on the page for context', async () => {
+  it('puts the daily trend on the page in place of the stamp ladder', async () => {
     await renderPage(<Catalog />, 'Blind boxes');
-    const ladder = screen.getByRole('region', { name: 'Stamp ladder' });
-    expect(within(ladder).getAllByText('Welcome Box').length).toBeGreaterThan(0);
-    expect(within(ladder).getAllByText('300 stamps').length).toBeGreaterThan(0);
+    expect(screen.queryByRole('region', { name: 'Stamp ladder' })).toBeNull();
+    const trend = screen.getByRole('region', { name: 'Daily trend' });
+    // No filter applied is the combined view, and says so.
+    expect(textOf(trend)).toContain('All boxes combined');
+    expect(textOf(trend)).toContain('claimed, redeemed and coupon spend per day');
+  });
+
+  it('filters the daily trend by box', async () => {
+    await renderPage(<Catalog />, 'Blind boxes');
+    const user = userEvent.setup();
+    const trend = () => screen.getByRole('region', { name: 'Daily trend' });
+
+    await user.click(within(trend()).getByRole('button', { name: 'Welcome' }));
+    await waitFor(() => expect(textOf(trend())).toContain('Welcome Box ·'));
+
+    // And back to the combined view.
+    await user.click(within(trend()).getByRole('button', { name: 'All boxes' }));
+    await waitFor(() => expect(textOf(trend())).toContain('All boxes combined'));
+  });
+
+  it('narrows the daily trend to any mix of claimed, redeemed and spend', async () => {
+    await renderPage(<Catalog />, 'Blind boxes');
+    const user = userEvent.setup();
+    const trend = () => screen.getByRole('region', { name: 'Daily trend' });
+    const chip = (name: string) => within(trend()).getByRole('button', { name });
+
+    await user.click(chip('Claimed'));
+    await waitFor(() => expect(textOf(trend())).toContain('claimed per day'));
+
+    await user.click(chip('Spend'));
+    await waitFor(() => expect(textOf(trend())).toContain('claimed and spend per day'));
+
+    // Switching every chip off is the combined view again, not an empty one.
+    await user.click(chip('Claimed'));
+    await user.click(chip('Spend'));
+    await waitFor(() => expect(textOf(trend())).toContain('claimed, redeemed and coupon spend per day'));
+  });
+
+  it('leaves out the daily chart entirely when the export has no coupon data', async () => {
+    await renderPage(<Catalog />, 'Blind boxes');
+    expect(screen.getByText(/The daily export has no coupon data to plot/)).toBeTruthy();
+    expect(screen.getByText(/reads 0 claimed and 0 redeemed/)).toBeTruthy();
+    expect(screen.getByText('No daily breakdown available')).toBeTruthy();
+    // A flat-zero chart would read as "nothing happened", so none is drawn.
+    expect(region('Daily trend').querySelector('.recharts-wrapper')).toBeNull();
   });
 
   it('reports the drop odds as healthy rather than flagging noise', async () => {

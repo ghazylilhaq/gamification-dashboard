@@ -130,9 +130,12 @@ export function couponTable(ds: Dataset): CouponRow[] {
  */
 export type DailyRedemptionAvailability = 'ok' | 'empty' | 'partial';
 
-export function dailyRedemptionAvailability(ds: Dataset): DailyRedemptionAvailability {
-  const cumulative = redemptionTotals(ds);
-  const daily = dailyRedemptionSeries(ds);
+export function dailyRedemptionAvailability(
+  ds: Dataset,
+  boxId: number | null = null,
+): DailyRedemptionAvailability {
+  const cumulative = redemptionOf(couponRowsOfBox(ds, boxId));
+  const daily = dailyRedemptionSeries(ds, boxId);
   const dailyTotal = sum(daily, (p) => p.claimed + p.redeemed + p.spend);
 
   // The current export is in exactly this state: every coupon row reads
@@ -143,6 +146,13 @@ export function dailyRedemptionAvailability(ds: Dataset): DailyRedemptionAvailab
   return 'ok';
 }
 
+/** Coupon rows for one box, or every box when `boxId` is null. */
+export function couponRowsOfBox(ds: Dataset, boxId: number | null) {
+  const rows = couponRows(ds);
+  if (boxId === null) return rows;
+  return rows.filter((r) => ds.boxIdByRewardId.get(r.reward_id) === boxId);
+}
+
 export interface DailyRedemptionPoint {
   date: string;
   claimed: number;
@@ -151,14 +161,27 @@ export interface DailyRedemptionPoint {
   incomplete: boolean;
 }
 
-export function dailyRedemptionSeries(ds: Dataset): DailyRedemptionPoint[] {
+/**
+ * Coupons claimed, redeemed and spent per day — for one box, or for every box
+ * combined when `boxId` is null.
+ */
+export function dailyRedemptionSeries(
+  ds: Dataset,
+  boxId: number | null = null,
+): DailyRedemptionPoint[] {
+  const inBox = (rewardId: number) =>
+    boxId === null || ds.boxIdByRewardId.get(rewardId) === boxId;
+
   const claimsByDate = new Map<string, number>();
   for (const r of ds.dailyRewards) {
+    if (boxId !== null && r.blind_box_id2 !== boxId) continue;
     claimsByDate.set(r.claim_date, (claimsByDate.get(r.claim_date) ?? 0) + r.total_claim);
   }
+
+  const daily = ds.dailySpend.filter((r) => inBox(r.reward_id));
   return ds.dates.map((date) => {
-    const rows = ds.dailySpend.filter((r) => r.date === date && r.type === 'COUPON');
-    const allRows = ds.dailySpend.filter((r) => r.date === date);
+    const rows = daily.filter((r) => r.date === date && r.type === 'COUPON');
+    const allRows = daily.filter((r) => r.date === date);
     const boxClaims = claimsByDate.get(date) ?? 0;
     const spendClaims = sum(allRows, (r) => r.total_user_claimed);
     return {

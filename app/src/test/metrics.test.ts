@@ -512,7 +512,47 @@ describe('daily redemption availability', () => {
     );
     expect(dailyRedemptionAvailability(patched)).toBe('ok');
   });
+
+  it('splits the daily series by box, and sums back to the combined view', () => {
+    // The Blind boxes page filters this series by box, so a per-box slice has
+    // to stay a strict partition of the unfiltered one.
+    const patched = buildDataset(
+      {
+        ...boot,
+        dailySpend: boot.spendSnapshot.map((r) => ({
+          date: '2026-09-15',
+          reward_id: r.reward_id,
+          name_en: r.name_en,
+          type: r.type,
+          coupon_ref_id: r.coupon_ref_id,
+          total_user_claimed: r.total_user_claimed,
+          total_user_redeemed: r.total_user_redeemed,
+          spend_amount: r.spend_amount,
+          source_export_at: '2026-09-15 13:40:36',
+        })),
+      },
+      { showTestData: false },
+    );
+
+    const combined = dailyRedemptionSeries(patched);
+    const perBox = patched.boxes.map((b) => dailyRedemptionSeries(patched, b.id));
+
+    expect(perBox.every((series) => series.length === combined.length)).toBe(true);
+    for (const [i, point] of combined.entries()) {
+      expect(sumBy(perBox, (series) => series[i]!.claimed)).toBe(point.claimed);
+      expect(sumBy(perBox, (series) => series[i]!.redeemed)).toBe(point.redeemed);
+      expect(sumBy(perBox, (series) => series[i]!.spend)).toBe(point.spend);
+    }
+
+    // And a box with coupon activity really does carry some of it.
+    const welcome = dailyRedemptionSeries(patched, 13);
+    expect(sumBy(welcome, (p) => p.redeemed)).toBeGreaterThan(0);
+  });
 });
+
+function sumBy<T>(items: T[], pick: (item: T) => number): number {
+  return items.reduce((total, item) => total + pick(item), 0);
+}
 
 describe('budget', () => {
   it('splits the budget three ways and they sum to the total', () => {

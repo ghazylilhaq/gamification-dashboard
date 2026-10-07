@@ -6,18 +6,17 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { KpiCard } from '@/components/KpiCard';
 import { SortSelect } from '@/components/ui/SortSelect';
 import { Table, TableWrap, Td, Th } from '@/components/ui/Table';
-import { BoxRateChart, MerchantChart, RedemptionTrendChart } from '@/components/charts/RedemptionCharts';
-import { DataNote, EmptyState, ErrorState, LoadingKpis, Skeleton } from '@/components/ui/states';
+import { BoxRateChart, MerchantChart } from '@/components/charts/RedemptionCharts';
+import { EmptyState, ErrorState, LoadingKpis, Skeleton } from '@/components/ui/states';
 import { freshnessText } from '@/components/Freshness';
 import {
-  couponTable, dailyRedemptionAvailability, dailyRedemptionSeries, redemptionByBox,
-  redemptionByMerchant, redemptionTotals,
+  couponTable, redemptionByBox, redemptionByMerchant, redemptionTotals,
 } from '@/lib/metrics/redemption';
 import { cashbackByBox, cashbackTable, cashbackTotals } from '@/lib/metrics/budget';
 import { useTableSort, type SortColumns } from '@/hooks/useTableSort';
 import type { CouponRow } from '@/lib/metrics/redemption';
 import type { CashbackRow } from '@/lib/metrics/budget';
-import { formatDate, formatNumber, formatPercent, formatRupiah } from '@/lib/format';
+import { formatNumber, formatPercent, formatRupiah } from '@/lib/format';
 import { DownloadButton } from '@/components/DownloadButton';
 import { cashbackColumns, couponColumns } from '@/lib/csv/columns';
 import { exportName } from '@/lib/csv/exportContext';
@@ -52,8 +51,6 @@ export function Redemption() {
       merchants: redemptionByMerchant(dataset),
       boxes: redemptionByBox(dataset),
       coupons: couponTable(dataset),
-      daily: dailyRedemptionSeries(dataset),
-      dailyAvailability: dailyRedemptionAvailability(dataset),
       cashback: cashbackTotals(dataset),
       cashbackRows: cashbackTable(dataset),
       cashbackBoxes: cashbackByBox(dataset),
@@ -77,13 +74,9 @@ export function Redemption() {
   if (!dataset || !raw || !data) return null;
   if (!hasAnyData) return <FirstRun page="Redemption" />;
 
-  const {
-    totals, merchants, boxes, coupons, daily, dailyAvailability,
-    cashback, cashbackBoxes,
-  } = data;
+  const { totals, merchants, boxes, coupons, cashback, cashbackBoxes } = data;
   const sortedCoupons = couponSort.rows;
   const cashbackRows = cashbackSort.rows;
-  const incomplete = daily.filter((p) => p.incomplete);
   const redeemedCoupons = coupons.filter((c) => c.redeemed > 0);
 
   if (totals.claimed === 0) {
@@ -380,50 +373,6 @@ export function Redemption() {
         </Card>
       </div>
 
-      <h2 className="mb-3 mt-6 font-display text-base font-bold text-ink-1">Daily trend</h2>
-
-      <Card label="Daily redemption">
-        <SectionHeader
-          title="Daily redemption and spend"
-          description="Coupons claimed and redeemed per day"
-          freshness={freshnessText(raw.freshness, ['dailySpend'])}
-        />
-        {dailyAvailability === 'empty' ? (
-          <>
-            <DataNote>
-              <strong>The daily export has no coupon data to plot.</strong> Every coupon row in{' '}
-              <span className="font-mono">daily_spent_reward</span> reads 0 claimed and 0 redeemed
-              on all {daily.length} date{daily.length === 1 ? '' : 's'}, while the cumulative
-              export reports {formatNumber(totals.claimed)} claimed and{' '}
-              {formatNumber(totals.redeemed)} redeemed. The column exists but is not being
-              populated — this needs fixing upstream.
-            </DataNote>
-            <div className="mt-4">
-              <EmptyState
-                title="No daily breakdown available"
-                description="Drawing a chart of zeros here would read as “nothing happened” rather than “data missing”, so it is left out until the export is fixed. Every cumulative figure on this page is unaffected."
-              />
-            </div>
-          </>
-        ) : (
-          <>
-            {incomplete.length > 0 && (
-              <div className="mb-4">
-                <DataNote>
-                  <strong>Daily data incomplete.</strong> The daily spend export reports far fewer
-                  claims than the claims file on{' '}
-                  {incomplete.length === 1
-                    ? formatDate(incomplete[0]!.date)
-                    : `${incomplete.length} of ${daily.length} dates`}
-                  , so these bars understate what actually happened. The cumulative figures above
-                  come from the cumulative export and are unaffected.
-                </DataNote>
-              </div>
-            )}
-            <RedemptionTrendChart data={daily} />
-          </>
-        )}
-      </Card>
     </>
   );
 }

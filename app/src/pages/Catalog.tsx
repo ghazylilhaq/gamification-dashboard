@@ -7,13 +7,20 @@ import { Drawer } from '@/components/ui/Drawer';
 import { ImageWithFallback } from '@/components/ui/ImageWithFallback';
 import { RarityBadge, TypeBadge, WarningBadge, NeutralBadge } from '@/components/ui/Badge';
 import { StockBar } from '@/components/StockAlerts';
-import { StampLadder } from '@/components/StampLadder';
 import { OddsDeviation, OddsVerdictBadge } from '@/components/OddsBar';
+import { FilterChips } from '@/components/ui/FilterChips';
+import { ToggleChips } from '@/components/ui/ToggleChips';
+import {
+  RedemptionTrendChart, TREND_METRICS, type TrendMetric,
+} from '@/components/charts/RedemptionCharts';
 import { DataNote, EmptyState, ErrorState, Skeleton } from '@/components/ui/states';
 import { freshnessText } from '@/components/Freshness';
 import { boxSummaries, MIN_CLAIMS_FOR_ODDS, type BoxSummary } from '@/lib/metrics/boxes';
-import { stampLadder } from '@/lib/metrics/claims';
-import { formatNumber, formatPercent, formatRupiah } from '@/lib/format';
+import {
+  dailyRedemptionAvailability, dailyRedemptionSeries,
+  type DailyRedemptionAvailability, type DailyRedemptionPoint,
+} from '@/lib/metrics/redemption';
+import { formatDate, formatNumber, formatPercent, formatRupiah } from '@/lib/format';
 import { DownloadButton } from '@/components/DownloadButton';
 import { boxColumns, boxRewardColumns } from '@/lib/csv/columns';
 import { exportName } from '@/lib/csv/exportContext';
@@ -22,9 +29,20 @@ import { csvFileName } from '@/lib/csv/export';
 export function Catalog() {
   const { dataset, loading, error, reload, raw, hasAnyData, filter } = useDashboard();
   const [openBoxId, setOpenBoxId] = useState<number | null>(null);
+  // The daily chart's own view options, independent of the global date filter.
+  const [trendBoxId, setTrendBoxId] = useState<number | null>(null);
+  const [trendMetrics, setTrendMetrics] = useState<TrendMetric[]>([]);
 
   const boxes = useMemo(() => (dataset ? boxSummaries(dataset) : []), [dataset]);
   const openBox = boxes.find((b) => b.boxId === openBoxId) ?? null;
+
+  const trend = useMemo(() => {
+    if (!dataset) return null;
+    return {
+      daily: dailyRedemptionSeries(dataset, trendBoxId),
+      availability: dailyRedemptionAvailability(dataset, trendBoxId),
+    };
+  }, [dataset, trendBoxId]);
 
   if (loading) {
     return (
@@ -46,7 +64,6 @@ export function Catalog() {
   const badWeights = boxes.filter((b) => b.weightWarning);
   const drifting = boxes.filter((b) => b.oddsVerdict === 'off-target');
   const judged = boxes.filter((b) => b.oddsVerdict !== 'insufficient');
-  const ladder = stampLadder(dataset);
 
   return (
     <>
@@ -64,18 +81,36 @@ export function Catalog() {
         }
       />
 
-      {/* How far users are climbing — the context for everything below. */}
-      <Card label="Stamp ladder" className="mb-4">
+      {/* Day-by-day coupon activity, with its own view options. */}
+      <Card label="Daily trend" className="mb-4">
         <SectionHeader
-          title="How far users are getting"
-          description={
-            ladder.basis === 'reach'
-              ? 'Onboarded users reaching each box, with claims'
-              : 'Claims per box since launch, ordered by stamps required'
-          }
-          freshness={freshnessText(raw.freshness, ['claims', 'reach'])}
+          title="Daily trend"
+          description={trendDescription(trendBoxId, trendMetrics, boxes)}
+          freshness={freshnessText(raw.freshness, ['dailySpend'])}
         />
-        <StampLadder ladder={ladder} />
+
+        <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:gap-8">
+          <FilterChips
+            legend="Box"
+            options={boxes.map((b) => ({ value: b.boxId, label: b.name.replace(/ Box$/, '') }))}
+            selected={trendBoxId}
+            onChange={setTrendBoxId}
+            allLabel="All boxes"
+          />
+          <ToggleChips
+            legend="Show"
+            hint="none selected shows all three"
+            options={TREND_METRICS}
+            selected={trendMetrics}
+            onChange={setTrendMetrics}
+          />
+        </div>
+
+        <DailyTrend
+          daily={trend?.daily ?? []}
+          availability={trend?.availability ?? 'ok'}
+          metrics={trendMetrics}
+        />
       </Card>
 
       {drifting.length > 0 && (
@@ -140,6 +175,79 @@ export function Catalog() {
       </Drawer>
     </>
   );
+}
+
+/**
+ * The chart, or an explanation of why there is none.
+ *
+ * A flat-zero chart would read as "nothing happened" rather than "the export
+ * is not populated", so when the daily file carries no coupon figures at all
+ * the chart is left out and the gap is named instead.
+ */
+function DailyTrend({
+  daily,
+  availability,
+  metrics,
+}: {
+  daily: DailyRedemptionPoint[];
+  availability: DailyRedemptionAvailability;
+  metrics: TrendMetric[];
+}) {
+  const incomplete = daily.filter((p) => p.incomplete);
+
+  if (availability === 'empty') {
+    return (
+      <>
+        <DataNote>
+          <strong>The daily export has no coupon data to plot.</strong> Every coupon row in{' '}
+          <span className="font-mono">daily_spent_reward</span> reads 0 claimed and 0 redeemed on
+          all {daily.length} date{daily.length === 1 ? '' : 's'}, while the cumulative export
+          reports claims and redemptions. The column exists but is not being populated — this needs
+          fixing upstream.
+        </DataNote>
+        <div className="mt-4">
+          <EmptyState
+            title="No daily breakdown available"
+            description="Every cumulative figure on this page comes from the snapshot exports and is unaffected."
+          />
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      {incomplete.length > 0 && (
+        <div className="mb-4">
+          <DataNote>
+            <strong>Daily data incomplete.</strong> The daily spend export reports far fewer claims
+            than the claims file on{' '}
+            {incomplete.length === 1
+              ? formatDate(incomplete[0]!.date)
+              : `${incomplete.length} of ${daily.length} dates`}
+            , so these bars understate what actually happened. The cumulative figures on the box
+            cards come from the snapshot exports and are unaffected.
+          </DataNote>
+        </div>
+      )}
+      <RedemptionTrendChart data={daily} metrics={metrics} />
+    </>
+  );
+}
+
+/** Says which view is on screen, so the filters are not the only clue. */
+function trendDescription(
+  boxId: number | null,
+  metrics: TrendMetric[],
+  boxes: BoxSummary[],
+): string {
+  const scope = boxId === null
+    ? 'All boxes combined'
+    : boxes.find((b) => b.boxId === boxId)?.name ?? 'Selected box';
+  const what = metrics.length === 0
+    ? 'claimed, redeemed and coupon spend per day'
+    : `${TREND_METRICS.filter((m) => metrics.includes(m.value)).map((m) => m.label.toLowerCase()).join(' and ')} per day`;
+  return `${scope} · ${what}`;
 }
 
 function BoxCard({ box, onOpen }: { box: BoxSummary; onOpen: () => void }) {
