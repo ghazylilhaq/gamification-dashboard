@@ -5,8 +5,11 @@ export interface ChipOption<T extends string | number> {
 }
 
 /**
- * A horizontal row of filter chips. `null` is the "all" state and is always
- * offered first, so there is a way back to the unfiltered view.
+ * A row of filter chips. `null` is the "all" state and is always offered
+ * first, so there is a way back to the unfiltered view.
+ *
+ * The chips wrap rather than scroll: a hidden chip is a filter nobody knows is
+ * there, and a dozen boxes do not fit on one line on a phone.
  */
 export function FilterChips<T extends string | number>({
   legend,
@@ -14,19 +17,22 @@ export function FilterChips<T extends string | number>({
   selected,
   onChange,
   allLabel = 'All',
+  className = '',
 }: {
   legend: string;
   options: ChipOption<T>[];
   selected: T | null;
   onChange: (value: T | null) => void;
   allLabel?: string;
+  /** Usually `grow`, to give a long chip row the width before it wraps. */
+  className?: string;
 }) {
   return (
-    <fieldset className="min-w-0">
+    <fieldset className={`min-w-0 ${className}`}>
       <legend className="mb-1.5 text-micro font-semibold uppercase tracking-wide text-ink-4">
         {legend}
       </legend>
-      <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+      <div className="flex flex-wrap gap-1.5">
         <Chip active={selected === null} onClick={() => onChange(null)}>
           {allLabel}
         </Chip>

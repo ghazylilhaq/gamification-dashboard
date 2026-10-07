@@ -96,6 +96,7 @@ export function Catalog() {
             selected={trendBoxId}
             onChange={setTrendBoxId}
             allLabel="All boxes"
+            className="grow"
           />
           <ToggleChips
             legend="Show"

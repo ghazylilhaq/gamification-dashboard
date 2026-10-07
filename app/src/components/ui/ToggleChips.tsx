@@ -12,6 +12,7 @@ export function ToggleChips<T extends string>({
   selected,
   onChange,
   hint,
+  className = '',
 }: {
   legend: string;
   options: Array<{ value: T; label: string }>;
@@ -19,18 +20,19 @@ export function ToggleChips<T extends string>({
   onChange: (values: T[]) => void;
   /** Shown beside the legend — usually what an empty selection means. */
   hint?: string;
+  className?: string;
 }) {
   const toggle = (value: T) => {
     onChange(selected.includes(value) ? selected.filter((v) => v !== value) : [...selected, value]);
   };
 
   return (
-    <fieldset className="min-w-0">
+    <fieldset className={`min-w-0 ${className}`}>
       <legend className="mb-1.5 text-micro font-semibold uppercase tracking-wide text-ink-4">
         {legend}
         {hint && <span className="ml-1.5 font-normal normal-case tracking-normal">{hint}</span>}
       </legend>
-      <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+      <div className="flex flex-wrap gap-1.5">
         {options.map((o) => (
           <Chip key={o.value} active={selected.includes(o.value)} onClick={() => toggle(o.value)}>
             {o.label}

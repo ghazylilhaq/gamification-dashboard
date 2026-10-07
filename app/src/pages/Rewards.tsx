@@ -90,7 +90,14 @@ export function Rewards() {
 
       <Card label="Reward filters" className="mb-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:gap-8">
-          <FilterChips legend="Box" options={boxOptions} selected={boxId} onChange={setBoxId} allLabel="All boxes" />
+          <FilterChips
+            legend="Box"
+            options={boxOptions}
+            selected={boxId}
+            onChange={setBoxId}
+            allLabel="All boxes"
+            className="grow"
+          />
           <FilterChips legend="Type" options={typeOptions} selected={type} onChange={setType} allLabel="Both" />
           {/* The phone list has no headers to click. */}
           <SortSelect sort={sort} className="sm:ml-auto" />
