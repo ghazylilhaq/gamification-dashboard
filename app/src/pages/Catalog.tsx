@@ -25,6 +25,7 @@ import { DownloadButton } from '@/components/DownloadButton';
 import { boxColumns, boxRewardColumns } from '@/lib/csv/columns';
 import { exportName } from '@/lib/csv/exportContext';
 import { csvFileName } from '@/lib/csv/export';
+import { useSearchHandoff } from '@/hooks/useSearchHandoff';
 
 export function Catalog() {
   const { dataset, loading, error, reload, raw, hasAnyData, filter } = useDashboard();
@@ -32,6 +33,12 @@ export function Catalog() {
   // The daily chart's own view options, independent of the global date filter.
   const [trendBoxId, setTrendBoxId] = useState<number | null>(null);
   const [trendMetrics, setTrendMetrics] = useState<TrendMetric[]>([]);
+
+  // The global search reaches a box by opening its drawer — there is no search
+  // box on this page, since all twelve cards are on screen at once.
+  useSearchHandoff((handoff) => {
+    if (handoff.boxId !== undefined) setOpenBoxId(handoff.boxId);
+  });
 
   const boxes = useMemo(() => (dataset ? boxSummaries(dataset) : []), [dataset]);
   const openBox = boxes.find((b) => b.boxId === openBoxId) ?? null;

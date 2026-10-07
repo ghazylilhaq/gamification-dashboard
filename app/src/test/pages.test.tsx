@@ -103,6 +103,58 @@ describe('Rewards page', () => {
     await waitFor(() => expect(screen.getByText('All rewards', { selector: 'h2' })).toBeTruthy());
   });
 
+  it('searches the table by name, narrowing it with the chips untouched', async () => {
+    await renderPage(<Rewards />, 'Rewards');
+    const user = userEvent.setup();
+    const filters = region('Reward filters');
+    await user.type(within(filters).getByLabelText('Search'), 'indomaret');
+
+    await waitFor(() => expect(screen.getByText('2 rewards')).toBeTruthy());
+    const body = region('All rewards').querySelector('tbody')!;
+    expect(body.querySelectorAll('tr')).toHaveLength(2);
+    expect(textOf(body as HTMLElement)).toContain('Indomaret');
+    // A chip count that moved as you typed would be unreadable, so the counts
+    // stay on the unfiltered list: Welcome still reads 9.
+    expect(textOf(filters)).toContain('Welcome9');
+  });
+
+  it('searches the reward id as well as the name', async () => {
+    await renderPage(<Rewards />, 'Rewards');
+    const user = userEvent.setup();
+    await user.type(within(region('Reward filters')).getByLabelText('Search'), '30034');
+    await waitFor(() => expect(screen.getByText('1 rewards')).toBeTruthy());
+  });
+
+  it('clears the search back to the full list', async () => {
+    await renderPage(<Rewards />, 'Rewards');
+    const user = userEvent.setup();
+    const filters = region('Reward filters');
+    await user.type(within(filters).getByLabelText('Search'), 'indomaret');
+    await waitFor(() => expect(screen.getByText('2 rewards')).toBeTruthy());
+
+    await user.click(within(filters).getByLabelText('Clear search'));
+    await waitFor(() => expect(screen.getByText('All rewards', { selector: 'h2' })).toBeTruthy());
+    expect(region('All rewards').querySelector('tbody')!.querySelectorAll('tr')).toHaveLength(105);
+  });
+
+  it('says so rather than showing an empty table when nothing matches', async () => {
+    await renderPage(<Rewards />, 'Rewards');
+    const user = userEvent.setup();
+    await user.type(within(region('Reward filters')).getByLabelText('Search'), 'zzzz');
+    await waitFor(() => expect(screen.getByText('No rewards match these filters')).toBeTruthy());
+    expect(screen.getByText(/Nothing matches/)).toBeTruthy();
+  });
+
+  it('narrows the top-10 rankings with the table, so the page reads as one cut', async () => {
+    await renderPage(<Rewards />, 'Rewards');
+    const user = userEvent.setup();
+    await user.type(within(region('Reward filters')).getByLabelText('Search'), 'indomaret');
+    await waitFor(() => expect(screen.getByText('2 rewards')).toBeTruthy());
+    const top = region('Top 10 by claims');
+    expect([...top.querySelectorAll('li')].length).toBeLessThanOrEqual(2);
+    expect(textOf(top)).toContain('Indomaret');
+  });
+
   it('ranks the top 10 by claims, matching spec §6', async () => {
     await renderPage(<Rewards />, 'Rewards');
     const top = region('Top 10 by claims');
@@ -161,6 +213,28 @@ describe('Redemption page', () => {
     await waitFor(() =>
       expect(textOf(region('Cashback rewards'))).toContain('sorted by reward, A→Z'),
     );
+  });
+
+  it('searches the coupon table on name, merchant and reference', async () => {
+    await renderPage(<Redemption />, 'Redemption');
+    const user = userEvent.setup();
+    const coupons = region('All coupons');
+    await user.type(within(coupons).getByLabelText('Search'), 'indomaret');
+
+    await waitFor(() => expect(textOf(region('All coupons'))).toContain('match “indomaret”'));
+    const rows = [...region('All coupons').querySelector('tbody')!.querySelectorAll('tr')];
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) expect(textOf(row as HTMLElement)).toContain('Indomaret');
+  });
+
+  it('searches the cashback table independently of the coupon one', async () => {
+    await renderPage(<Redemption />, 'Redemption');
+    const user = userEvent.setup();
+    await user.type(within(region('Cashback rewards')).getByLabelText('Search'), 'rp1.000');
+
+    await waitFor(() => expect(textOf(region('Cashback rewards'))).toContain('match “rp1.000”'));
+    // The coupon table above is untouched.
+    expect(textOf(region('All coupons'))).toContain('have been redeemed at least once');
   });
 
   it('averages the face value of redeemed coupons only', async () => {
@@ -646,6 +720,20 @@ describe('Activity page', () => {
     expect(first).toContain('Daily Login');
     expect(first).toContain('IGAME_DAILY_LOGIN');
     expect(first).toContain('Starter Quest');
+  });
+
+  it('searches the activity table by name', async () => {
+    await renderPage(<Activity />, 'Activity');
+    const user = userEvent.setup();
+    const activities = region('All activities');
+    await user.type(within(activities).getByLabelText('Search'), 'login');
+
+    await waitFor(() => {
+      const rows = region('All activities').querySelector('tbody')!.querySelectorAll('tr');
+      expect(rows.length).toBeLessThan(32);
+    });
+    const body = region('All activities').querySelector('tbody')!;
+    expect(textOf(body as HTMLElement)).toContain('Daily Login');
   });
 
   it('lays reach out as a ladder, one column per box, with the full split', async () => {

@@ -1,10 +1,11 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useDashboard } from '@/hooks/useDashboard';
 import { FirstRun } from '@/components/FirstRun';
 import { Card, SectionHeader } from '@/components/ui/Card';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { KpiCard } from '@/components/KpiCard';
 import { SortSelect } from '@/components/ui/SortSelect';
+import { SearchInput } from '@/components/ui/SearchInput';
 import { Table, TableWrap, Td, Th } from '@/components/ui/Table';
 import { BoxRateChart, MerchantChart } from '@/components/charts/RedemptionCharts';
 import { EmptyState, ErrorState, LoadingKpis, Skeleton } from '@/components/ui/states';
@@ -14,6 +15,7 @@ import {
 } from '@/lib/metrics/redemption';
 import { cashbackByBox, cashbackTable, cashbackTotals } from '@/lib/metrics/budget';
 import { useTableSort, type SortColumns } from '@/hooks/useTableSort';
+import { useSearch } from '@/lib/search';
 import type { CouponRow } from '@/lib/metrics/redemption';
 import type { CashbackRow } from '@/lib/metrics/budget';
 import { formatNumber, formatPercent, formatRupiah } from '@/lib/format';
@@ -57,9 +59,24 @@ export function Redemption() {
     };
   }, [dataset]);
 
-  // Sorting lives above the early returns, as hooks must.
-  const couponSort = useTableSort(data?.coupons ?? [], COUPON_COLUMNS, { key: 'redeemed' }, (c) => c.name);
-  const cashbackSort = useTableSort(data?.cashbackRows ?? [], CASHBACK_COLUMNS, { key: 'spend' }, (r) => r.name);
+  // Each table searches on its own terms, so each owns its own query.
+  const [couponQuery, setCouponQuery] = useState('');
+  const [cashbackQuery, setCashbackQuery] = useState('');
+
+  // Searching and sorting live above the early returns, as hooks must.
+  const couponMatches = useSearch(data?.coupons ?? [], couponQuery, (c) => [
+    c.name,
+    c.merchant,
+    c.couponRefId,
+    c.boxName,
+  ]);
+  const cashbackMatches = useSearch(data?.cashbackRows ?? [], cashbackQuery, (r) => [
+    r.name,
+    r.boxName,
+  ]);
+
+  const couponSort = useTableSort(couponMatches, COUPON_COLUMNS, { key: 'redeemed' }, (c) => c.name);
+  const cashbackSort = useTableSort(cashbackMatches, CASHBACK_COLUMNS, { key: 'spend' }, (r) => r.name);
 
   if (loading) {
     return (
@@ -155,20 +172,41 @@ export function Redemption() {
       <Card label="All coupons" className="mt-4">
         <SectionHeader
           title="All coupons"
-          description={`${formatNumber(redeemedCoupons.length)} of ${formatNumber(coupons.length)} have been redeemed at least once · sorted by ${couponSort.summary}`}
+          description={
+            couponQuery === ''
+              ? `${formatNumber(redeemedCoupons.length)} of ${formatNumber(coupons.length)} have been redeemed at least once · sorted by ${couponSort.summary}`
+              : `${formatNumber(sortedCoupons.length)} of ${formatNumber(coupons.length)} coupons match “${couponQuery}” · sorted by ${couponSort.summary}`
+          }
           freshness={freshnessText(raw.freshness, ['spend'])}
           action={
             <DownloadButton
-              fileName={exportName('coupons', filter)}
+              fileName={exportName('coupons', filter, [
+                couponQuery === '' ? null : `matching-${couponQuery}`,
+              ])}
               columns={couponColumns}
               rows={sortedCoupons}
             />
           }
         />
 
-        {/* The phone list below has no headers to click. */}
-        <SortSelect sort={couponSort} className="mb-3" />
+        <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+          <SearchInput
+            value={couponQuery}
+            onChange={setCouponQuery}
+            placeholder="Coupon, merchant or reference…"
+            className="w-full sm:w-64"
+          />
+          {/* The phone list below has no headers to click. */}
+          <SortSelect sort={couponSort} />
+        </div>
 
+        {couponQuery !== '' && sortedCoupons.length === 0 ? (
+          <EmptyState
+            title={`No coupons match “${couponQuery}”`}
+            description="Clear the search to see every coupon."
+          />
+        ) : (
+          <>
         {/* Desktop table */}
         <div className="hidden md:block">
           <TableWrap>
@@ -244,6 +282,8 @@ export function Redemption() {
             </li>
           ))}
         </ul>
+          </>
+        )}
       </Card>
 
       {/* Cashback: the other half of the cost, with no redemption step. */}
@@ -310,18 +350,40 @@ export function Redemption() {
         <Card label="Cashback rewards">
           <SectionHeader
             title="Cashback rewards"
-            description={`All ${formatNumber(cashbackRows.length)} cashback rewards · sorted by ${cashbackSort.summary}`}
+            description={
+              cashbackQuery === ''
+                ? `All ${formatNumber(cashbackRows.length)} cashback rewards · sorted by ${cashbackSort.summary}`
+                : `${formatNumber(cashbackRows.length)} cashback rewards match “${cashbackQuery}” · sorted by ${cashbackSort.summary}`
+            }
             freshness={freshnessText(raw.freshness, ['spend'])}
             action={
               <DownloadButton
-                fileName={exportName('cashback-rewards', filter)}
+                fileName={exportName('cashback-rewards', filter, [
+                  cashbackQuery === '' ? null : `matching-${cashbackQuery}`,
+                ])}
                 columns={cashbackColumns}
                 rows={cashbackRows}
               />
             }
           />
 
-          <SortSelect sort={cashbackSort} className="mb-3" />
+          <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+            <SearchInput
+              value={cashbackQuery}
+              onChange={setCashbackQuery}
+              placeholder="Reward or box…"
+              className="w-full sm:w-56"
+            />
+            <SortSelect sort={cashbackSort} />
+          </div>
+
+          {cashbackQuery !== '' && cashbackRows.length === 0 ? (
+            <EmptyState
+              title={`No cashback rewards match “${cashbackQuery}”`}
+              description="Clear the search to see every cashback reward."
+            />
+          ) : (
+            <>
           <div className="hidden md:block">
             <TableWrap>
               <Table>
@@ -370,6 +432,8 @@ export function Redemption() {
               </li>
             ))}
           </ul>
+            </>
+          )}
         </Card>
       </div>
 
