@@ -10,16 +10,13 @@ import { StockBar } from '@/components/StockAlerts';
 import { OddsDeviation, OddsVerdictBadge } from '@/components/OddsBar';
 import { FilterChips } from '@/components/ui/FilterChips';
 import { ToggleChips } from '@/components/ui/ToggleChips';
-import {
-  RedemptionTrendChart, TREND_METRICS, type TrendMetric,
-} from '@/components/charts/RedemptionCharts';
+import { BoxTrendChart, TREND_METRICS, type TrendMetric } from '@/components/charts/BoxTrendChart';
 import { DataNote, EmptyState, ErrorState, Skeleton } from '@/components/ui/states';
 import { freshnessText } from '@/components/Freshness';
-import { boxSummaries, MIN_CLAIMS_FOR_ODDS, type BoxSummary } from '@/lib/metrics/boxes';
 import {
-  dailyRedemptionAvailability, dailyRedemptionSeries,
-  type DailyRedemptionAvailability, type DailyRedemptionPoint,
-} from '@/lib/metrics/redemption';
+  boxSummaries, dailyBoxSeries, MIN_CLAIMS_FOR_ODDS,
+  type BoxSummary, type DailyBoxPoint,
+} from '@/lib/metrics/boxes';
 import { formatDate, formatNumber, formatPercent, formatRupiah } from '@/lib/format';
 import { DownloadButton } from '@/components/DownloadButton';
 import { boxColumns, boxRewardColumns, dailyTrendColumns } from '@/lib/csv/columns';
@@ -43,13 +40,10 @@ export function Catalog() {
   const boxes = useMemo(() => (dataset ? boxSummaries(dataset) : []), [dataset]);
   const openBox = boxes.find((b) => b.boxId === openBoxId) ?? null;
 
-  const trend = useMemo(() => {
-    if (!dataset) return null;
-    return {
-      daily: dailyRedemptionSeries(dataset, trendBoxId),
-      availability: dailyRedemptionAvailability(dataset, trendBoxId),
-    };
-  }, [dataset, trendBoxId]);
+  const trend = useMemo(
+    () => (dataset ? dailyBoxSeries(dataset, trendBoxId) : []),
+    [dataset, trendBoxId],
+  );
 
   if (loading) {
     return (
@@ -103,15 +97,7 @@ export function Catalog() {
                 trendMetrics.length === 0 ? null : trendMetrics.join('-'),
               ])}
               columns={dailyTrendColumns(trendMetrics)}
-              // The daily export carries no coupon figures at all in this
-              // state, so there is nothing to write — a file of zeros would
-              // read as "nothing happened" exactly as a chart of zeros would.
-              rows={trend?.availability === 'empty' ? [] : trend?.daily ?? []}
-              title={
-                trend?.availability === 'empty'
-                  ? 'Nothing to export — the daily export has no coupon data yet'
-                  : undefined
-              }
+              rows={trend}
             />
           }
         />
@@ -134,11 +120,7 @@ export function Catalog() {
           />
         </div>
 
-        <DailyTrend
-          daily={trend?.daily ?? []}
-          availability={trend?.availability ?? 'ok'}
-          metrics={trendMetrics}
-        />
+        <DailyTrend daily={trend} metrics={trendMetrics} />
       </Card>
 
       {drifting.length > 0 && (
@@ -206,59 +188,68 @@ export function Catalog() {
 }
 
 /**
- * The chart, or an explanation of why there is none.
+ * The chart, with the two caveats this data carries named above it.
  *
- * A flat-zero chart would read as "nothing happened" rather than "the export
- * is not populated", so when the daily file carries no coupon figures at all
- * the chart is left out and the gap is named instead.
+ * Claims are solid: they come from the daily claims export. Spend is not
+ * always — the spend export's cashback column is unpopulated, so those days
+ * are reconstructed from claims, and its coupon column is empty too, which no
+ * reconstruction can fix.
  */
-function DailyTrend({
-  daily,
-  availability,
-  metrics,
-}: {
-  daily: DailyRedemptionPoint[];
-  availability: DailyRedemptionAvailability;
-  metrics: TrendMetric[];
-}) {
+function DailyTrend({ daily, metrics }: { daily: DailyBoxPoint[]; metrics: TrendMetric[] }) {
+  const showsSpend = metrics.length === 0 || metrics.includes('spend');
+  const derived = daily.filter((p) => p.cashbackDerived && p.cashback > 0);
   const incomplete = daily.filter((p) => p.incomplete);
-
-  if (availability === 'empty') {
-    return (
-      <>
-        <DataNote>
-          <strong>The daily export has no coupon data to plot.</strong> Every coupon row in{' '}
-          <span className="font-mono">daily_spent_reward</span> reads 0 claimed and 0 redeemed on
-          all {daily.length} date{daily.length === 1 ? '' : 's'}, while the cumulative export
-          reports claims and redemptions. The column exists but is not being populated — this needs
-          fixing upstream.
-        </DataNote>
-        <div className="mt-4">
-          <EmptyState
-            title="No daily breakdown available"
-            description="Every cumulative figure on this page comes from the snapshot exports and is unaffected."
-          />
-        </div>
-      </>
-    );
-  }
+  const couponSpend = daily.reduce((total, p) => total + p.coupon, 0);
+  const redeemed = daily.reduce((total, p) => total + p.redeemed, 0);
+  const showsRedeemed = metrics.length === 0 || metrics.includes('redeemed');
 
   return (
     <>
-      {incomplete.length > 0 && (
+      {showsSpend && derived.length > 0 && (
         <div className="mb-4">
-          <DataNote>
-            <strong>Daily data incomplete.</strong> The daily spend export reports far fewer claims
-            than the claims file on{' '}
-            {incomplete.length === 1
-              ? formatDate(incomplete[0]!.date)
-              : `${incomplete.length} of ${daily.length} dates`}
-            , so these bars understate what actually happened. The cumulative figures on the box
-            cards come from the snapshot exports and are unaffected.
+          <DataNote tone="info">
+            <strong>Cashback is reconstructed on {derived.length === daily.length ? 'every' : `${derived.length} of ${daily.length}`} day{daily.length === 1 ? '' : 's'}.</strong>{' '}
+            The daily spend export reports no cashback, so it is calculated as claims ×
+            the reward&rsquo;s cashback value. That matches the cumulative total closely, but it
+            is a reconstruction — it will switch to the exported figure by itself once the
+            upstream query is fixed.
           </DataNote>
         </div>
       )}
-      <RedemptionTrendChart data={daily} metrics={metrics} />
+
+      {showsSpend && couponSpend === 0 && (
+        <div className="mb-4">
+          <DataNote>
+            <strong>Coupon spend is missing from the daily export.</strong> Every coupon row in{' '}
+            <span className="font-mono">daily_spent_reward</span> reads 0, so the spend line here
+            is cashback only and understates the real cost. The cumulative coupon figures on
+            Redemption are unaffected.
+          </DataNote>
+        </div>
+      )}
+
+      {showsRedeemed && redeemed === 0 && couponSpend === 0 && (
+        <div className="mb-4">
+          <DataNote tone="info">
+            <strong>Coupons redeemed reads 0 every day</strong> for the same reason — the column
+            exists in the daily export but is not populated. Redemption has the cumulative count.
+          </DataNote>
+        </div>
+      )}
+
+      {incomplete.length > 0 && (
+        <div className="mb-4">
+          <DataNote>
+            <strong>The spend export lags the claims file on{' '}
+            {incomplete.length === 1
+              ? formatDate(incomplete[0]!.date)
+              : `${incomplete.length} of ${daily.length} dates`}.</strong>{' '}
+            Box claims are unaffected — they come from the claims export.
+          </DataNote>
+        </div>
+      )}
+
+      <BoxTrendChart data={daily} metrics={metrics} />
     </>
   );
 }
@@ -273,7 +264,7 @@ function trendDescription(
     ? 'All boxes combined'
     : boxes.find((b) => b.boxId === boxId)?.name ?? 'Selected box';
   const what = metrics.length === 0
-    ? 'claimed, redeemed and coupon spend per day'
+    ? 'box claims, coupons redeemed and spend per day'
     : `${TREND_METRICS.filter((m) => metrics.includes(m.value)).map((m) => m.label.toLowerCase()).join(' and ')} per day`;
   return `${scope} · ${what}`;
 }

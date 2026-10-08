@@ -1,6 +1,7 @@
 import { type Dataset, sum } from './dataset';
 import { stockStatusOf, type StockStatus } from './stock';
 import { faceValue, rewardRedemptionRate } from './redemption';
+import { isDailySpendIncomplete } from './spend';
 
 /**
  * Per-box monitoring: what is in each box, how much of it is left, and whether
@@ -250,4 +251,71 @@ export function boxesWithBadWeights(ds: Dataset): BoxSummary[] {
 /** Boxes where a reward's observed share is unlikely to be chance. */
 export function boxesWithOddsDrift(ds: Dataset): BoxSummary[] {
   return boxSummaries(ds).filter((b) => b.oddsVerdict === 'off-target');
+}
+
+/**
+ * One day of a box's activity, for the Blind boxes daily trend.
+ *
+ * Claims come from the daily claims export, which is the authority on how many
+ * rewards came out of a box — not from the spend export, whose claim columns
+ * are only used to judge whether that file is keeping up.
+ *
+ * Spend is cashback plus coupon. Cashback is read from the spend export where
+ * it has figures and reconstructed as `claims × cashback_value` where it does
+ * not, exactly as the Budget page does it, so this self-corrects the day the
+ * upstream query is fixed. Gacha cashback is deliberately absent: the gacha
+ * draw belongs to no box, so including it would stop the per-box numbers
+ * summing to the combined view. Campaign-wide spend lives on Budget.
+ */
+export interface DailyBoxPoint {
+  date: string;
+  /** Rewards claimed out of the box that day, every reward type. */
+  claims: number;
+  /** Coupons redeemed at a merchant that day. */
+  redeemed: number;
+  cashback: number;
+  coupon: number;
+  /** cashback + coupon. */
+  spend: number;
+  /** The cashback above is reconstructed, not exported. */
+  cashbackDerived: boolean;
+  /** The spend export reports far fewer claims than the claims file. */
+  incomplete: boolean;
+}
+
+/** The daily series for one box, or every box combined when `boxId` is null. */
+export function dailyBoxSeries(ds: Dataset, boxId: number | null = null): DailyBoxPoint[] {
+  const claimRows = boxId === null
+    ? ds.dailyRewards
+    : ds.dailyRewards.filter((r) => r.blind_box_id2 === boxId);
+  const spendRows = boxId === null
+    ? ds.dailySpend
+    : ds.dailySpend.filter((r) => ds.boxIdByRewardId.get(r.reward_id) === boxId);
+
+  return ds.dates.map((date) => {
+    const claims = claimRows.filter((r) => r.claim_date === date);
+    const spend = spendRows.filter((r) => r.date === date);
+    const coupons = spend.filter((r) => r.type === 'COUPON');
+
+    const exported = sum(spend.filter((r) => r.type === 'CASHBACK'), (r) => r.spend_amount);
+    const cashbackDerived = exported <= 0;
+    const cashback = cashbackDerived
+      ? sum(
+          claims.filter((r) => r.reward_type === 'CASHBACK'),
+          (r) => r.total_claim * (r.cashback_value ?? 0),
+        )
+      : exported;
+    const coupon = sum(coupons, (r) => r.spend_amount);
+
+    return {
+      date,
+      claims: sum(claims, (r) => r.total_claim),
+      redeemed: sum(coupons, (r) => r.total_user_redeemed),
+      cashback,
+      coupon,
+      spend: cashback + coupon,
+      cashbackDerived,
+      incomplete: isDailySpendIncomplete(spend, sum(claims, (r) => r.total_claim)),
+    };
+  });
 }

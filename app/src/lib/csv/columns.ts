@@ -1,8 +1,8 @@
 import type { CsvColumn } from './export';
 import type { RewardRow } from '@/lib/metrics/rewards';
-import type { CouponRow, DailyRedemptionPoint } from '@/lib/metrics/redemption';
+import type { CouponRow } from '@/lib/metrics/redemption';
 import type { CashbackRow, BudgetTypeRow, BudgetBoxRow, DailyBudgetPoint } from '@/lib/metrics/budget';
-import type { BoxSummary, BoxRewardOdds } from '@/lib/metrics/boxes';
+import type { BoxSummary, BoxRewardOdds, DailyBoxPoint } from '@/lib/metrics/boxes';
 import type { GachaPoint } from '@/lib/metrics/gacha';
 import type { DailyClaimPoint } from '@/lib/metrics/claims';
 import type { ActivityRow } from '@/lib/metrics/activity';
@@ -125,27 +125,34 @@ export const gachaColumns: CsvColumn<GachaPoint>[] = [
  *
  * Takes the metric selection so the file matches the chart on screen rather
  * than silently widening: an empty selection is the combined view and writes
- * all three. `data_incomplete` carries the warning the chart shows, so a row
- * that understates the day cannot be summed in a spreadsheet without notice.
+ * all three. Spend is always split into its cashback and coupon halves, since
+ * the two are not equally trustworthy, and the two flag columns say which days
+ * to treat with care — a reader summing the spend column in a spreadsheet
+ * would otherwise have no way to know.
  */
 export function dailyTrendColumns(
-  metrics: Array<'claimed' | 'redeemed' | 'spend'> = [],
-): CsvColumn<DailyRedemptionPoint>[] {
-  const show = (m: 'claimed' | 'redeemed' | 'spend') =>
+  metrics: Array<'claims' | 'redeemed' | 'spend'> = [],
+): CsvColumn<DailyBoxPoint>[] {
+  const show = (m: 'claims' | 'redeemed' | 'spend') =>
     metrics.length === 0 || metrics.includes(m);
 
   return [
     { header: 'date', value: (r) => r.date },
-    ...(show('claimed')
-      ? [{ header: 'coupons_claimed', value: (r: DailyRedemptionPoint) => r.claimed }]
+    ...(show('claims')
+      ? [{ header: 'box_claims', value: (r: DailyBoxPoint) => r.claims }]
       : []),
     ...(show('redeemed')
-      ? [{ header: 'coupons_redeemed', value: (r: DailyRedemptionPoint) => r.redeemed }]
+      ? [{ header: 'coupons_redeemed', value: (r: DailyBoxPoint) => r.redeemed }]
       : []),
     ...(show('spend')
-      ? [{ header: 'coupon_spend (IDR)', value: (r: DailyRedemptionPoint) => r.spend }]
+      ? [
+          { header: 'spend (IDR)', value: (r: DailyBoxPoint) => r.spend },
+          { header: 'cashback_spend (IDR)', value: (r: DailyBoxPoint) => r.cashback },
+          { header: 'coupon_spend (IDR)', value: (r: DailyBoxPoint) => r.coupon },
+          { header: 'cashback_reconstructed', value: (r: DailyBoxPoint) => r.cashbackDerived },
+        ]
       : []),
-    { header: 'data_incomplete', value: (r) => r.incomplete },
+    { header: 'spend_data_incomplete', value: (r) => r.incomplete },
   ];
 }
 

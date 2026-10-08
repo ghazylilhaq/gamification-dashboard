@@ -7,9 +7,9 @@ import {
 } from '@/lib/csv/columns';
 import { buildDataset } from '@/lib/metrics/dataset';
 import { rewardRows, sortByStockLeft } from '@/lib/metrics/rewards';
-import { couponTable, dailyRedemptionSeries } from '@/lib/metrics/redemption';
+import { couponTable } from '@/lib/metrics/redemption';
 import { cashbackTable, budgetByType, dailyBudgetSeries } from '@/lib/metrics/budget';
-import { boxSummaries } from '@/lib/metrics/boxes';
+import { boxSummaries, dailyBoxSeries } from '@/lib/metrics/boxes';
 import { gachaSeries } from '@/lib/metrics/gacha';
 import { loadFixtureBootstrap } from './fixtures';
 import type { Bootstrap } from '@/lib/types';
@@ -174,31 +174,41 @@ describe('the exported tables', () => {
 });
 
 describe('daily trend export', () => {
-  it('writes one row per date, with the incompleteness flag', () => {
-    const rows = dailyRedemptionSeries(ds());
+  it('writes one row per date, splitting spend into its two halves', () => {
+    const rows = dailyBoxSeries(ds());
     const lines = toCsv(dailyTrendColumns(), rows).split('\r\n');
     const header = parseRow(lines[0]!);
 
     expect(header).toEqual([
-      'date', 'coupons_claimed', 'coupons_redeemed', 'coupon_spend (IDR)', 'data_incomplete',
+      'date', 'box_claims', 'coupons_redeemed',
+      'spend (IDR)', 'cashback_spend (IDR)', 'coupon_spend (IDR)', 'cashback_reconstructed',
+      'spend_data_incomplete',
     ]);
     expect(lines).toHaveLength(rows.length + 1);
   });
 
   it('narrows the columns to the selected metrics, and keeps the date and flag', () => {
-    const rows = dailyRedemptionSeries(ds());
-    const header = parseRow(toCsv(dailyTrendColumns(['spend']), rows).split('\r\n')[0]!);
-    expect(header).toEqual(['date', 'coupon_spend (IDR)', 'data_incomplete']);
+    const rows = dailyBoxSeries(ds());
+    const header = parseRow(toCsv(dailyTrendColumns(['claims']), rows).split('\r\n')[0]!);
+    expect(header).toEqual(['date', 'box_claims', 'spend_data_incomplete']);
 
     // Column order follows the chart's, not the order the chips were clicked.
-    const both = parseRow(toCsv(dailyTrendColumns(['spend', 'claimed']), rows).split('\r\n')[0]!);
-    expect(both).toEqual(['date', 'coupons_claimed', 'coupon_spend (IDR)', 'data_incomplete']);
+    const both = parseRow(toCsv(dailyTrendColumns(['spend', 'claims']), rows).split('\r\n')[0]!);
+    expect(both.slice(0, 3)).toEqual(['date', 'box_claims', 'spend (IDR)']);
   });
 
-  it('exports one box rather than the campaign when a box is picked', () => {
-    const all = dailyRedemptionSeries(ds());
-    const welcome = dailyRedemptionSeries(ds(), 13);
-    // Same dates either way — a box with no activity still has its days.
-    expect(welcome.map((r) => r.date)).toEqual(all.map((r) => r.date));
+  it('exports real claims and cashback, not a file of zeros', () => {
+    const rows = dailyBoxSeries(ds());
+    const lines = toCsv(dailyTrendColumns(), rows).split('\r\n');
+    const header = parseRow(lines[0]!);
+    const body = lines.slice(1).map(parseRow);
+
+    const claims = body.reduce((t, r) => t + Number(r[header.indexOf('box_claims')]), 0);
+    const spend = body.reduce((t, r) => t + Number(r[header.indexOf('spend (IDR)')]), 0);
+    expect(claims).toBeGreaterThan(0);
+    expect(spend).toBeGreaterThan(0);
+
+    // The reconstruction is flagged on every row it was used for.
+    expect(body.every((r) => r[header.indexOf('cashback_reconstructed')] === 'yes')).toBe(true);
   });
 });

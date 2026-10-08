@@ -8,6 +8,7 @@ import { stockSummary, stockStatusOf } from '@/lib/metrics/stock';
 import { rewardRows, sortByStockLeft, topByClaims } from '@/lib/metrics/rewards';
 import {
   boxSummaries, boxesWithBadWeights, boxesWithOddsDrift, oddsVerdictOf, MIN_CLAIMS_FOR_ODDS,
+  dailyBoxSeries,
 } from '@/lib/metrics/boxes';
 import { overviewKpis } from '@/lib/metrics/overview';
 import { belowFirstBox, reachFunnel, reachTotals } from '@/lib/metrics/reach';
@@ -1048,3 +1049,52 @@ describe('projection to the 1 Dec campaign close', () => {
     expect(r.unpricedUnits).toBe(224_782);
   });
 });
+
+describe('daily box trend', () => {
+  it('reads box claims from the claims export, matching the box card', () => {
+    // Welcome Box's card reports 814 claims on launch day; the daily series
+    // has to agree, or the page contradicts itself.
+    const launchDay = dailyBoxSeries(ds, 13).find((p) => p.date === '2026-09-15');
+    expect(launchDay?.claims).toBe(814);
+  });
+
+  it('is a strict partition: the boxes sum to the combined view', () => {
+    const combined = dailyBoxSeries(ds);
+    const perBox = ds.boxes.map((b) => dailyBoxSeries(ds, b.id));
+
+    for (const [i, point] of combined.entries()) {
+      expect(sumOf(perBox, (series) => series[i]!.claims)).toBe(point.claims);
+      expect(sumOf(perBox, (series) => series[i]!.spend)).toBe(point.spend);
+    }
+  });
+
+  it('reconstructs cashback from claims when the export reports none', () => {
+    const launchDay = dailyBoxSeries(ds).find((p) => p.date === '2026-09-15')!;
+    expect(launchDay.cashbackDerived).toBe(true);
+    expect(launchDay.cashback).toBe(580_300);
+    // Spend is cashback plus coupon, and the coupon half is the missing one.
+    expect(launchDay.coupon).toBe(0);
+    expect(launchDay.spend).toBe(launchDay.cashback);
+  });
+
+  it('prefers the exported cashback on days the export has figures', () => {
+    // Pre-launch days do carry spend rows, so those must not be reconstructed.
+    const early = dailyBoxSeries(dsWithTest).find((p) => p.date === '2026-09-04')!;
+    expect(early.cashbackDerived).toBe(false);
+    expect(early.cashback).toBe(2_000);
+  });
+
+  it('leaves gacha cashback out, since it belongs to no box', () => {
+    // Gacha cashback is real spend but not box-attributed; including it would
+    // break the partition above. Budget is where the campaign total lives.
+    const combined = dailyBoxSeries(ds);
+    const launchDay = combined.find((p) => p.date === '2026-09-15')!;
+    const gacha = ds.dailyGacha.find((r) => r.claim_date === '2026-09-15');
+    expect(gacha!.cashback_amount).toBeGreaterThan(0);
+    expect(launchDay.spend).toBe(launchDay.cashback + launchDay.coupon);
+  });
+});
+
+function sumOf<T>(items: T[], pick: (item: T) => number): number {
+  return items.reduce((total, item) => total + pick(item), 0);
+}
