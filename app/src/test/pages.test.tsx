@@ -426,6 +426,24 @@ describe('Blind boxes page', () => {
     await waitFor(() => expect(textOf(trend())).toContain('claimed, redeemed and coupon spend per day'));
   });
 
+  it('offers the daily trend as a CSV that follows the filters', async () => {
+    await renderPage(<Catalog />, 'Blind boxes');
+    const user = userEvent.setup();
+    const trend = () => screen.getByRole('region', { name: 'Daily trend' });
+    const button = () => within(trend()).getByText('CSV').closest('button')!;
+
+    // This fixture's daily export has no coupon figures, so there is nothing
+    // honest to write and the button says so rather than exporting zeros.
+    expect(button().disabled).toBe(true);
+    expect(button().title).toContain('no coupon data');
+
+    // The filename still records how the view was cut.
+    await user.click(within(trend()).getByRole('button', { name: 'Welcome' }));
+    await waitFor(() => expect(textOf(trend())).toContain('Welcome Box ·'));
+    await user.click(within(trend()).getByRole('button', { name: 'Claimed' }));
+    await waitFor(() => expect(textOf(trend())).toContain('claimed per day'));
+  });
+
   it('leaves out the daily chart entirely when the export has no coupon data', async () => {
     await renderPage(<Catalog />, 'Blind boxes');
     expect(screen.getByText(/The daily export has no coupon data to plot/)).toBeTruthy();
@@ -657,7 +675,7 @@ describe('CSV download buttons', () => {
       [<Redemption />, 'Redemption', 2],
       [<Budget />, 'Budget', 3],
       [<Gacha />, 'Gacha', 1],
-      [<Catalog />, 'Blind boxes', 1],
+      [<Catalog />, 'Blind boxes', 2],
     ] as const) {
       cleanup();
       await renderPage(ui, waitText);

@@ -1,6 +1,6 @@
 import type { CsvColumn } from './export';
 import type { RewardRow } from '@/lib/metrics/rewards';
-import type { CouponRow } from '@/lib/metrics/redemption';
+import type { CouponRow, DailyRedemptionPoint } from '@/lib/metrics/redemption';
 import type { CashbackRow, BudgetTypeRow, BudgetBoxRow, DailyBudgetPoint } from '@/lib/metrics/budget';
 import type { BoxSummary, BoxRewardOdds } from '@/lib/metrics/boxes';
 import type { GachaPoint } from '@/lib/metrics/gacha';
@@ -119,6 +119,35 @@ export const gachaColumns: CsvColumn<GachaPoint>[] = [
   { header: 'cashback (IDR)', value: (r) => r.cashback },
   { header: 'cumulative_cashback (IDR)', value: (r) => r.cumulativeCashback },
 ];
+
+/**
+ * The Blind boxes daily trend, one row per date.
+ *
+ * Takes the metric selection so the file matches the chart on screen rather
+ * than silently widening: an empty selection is the combined view and writes
+ * all three. `data_incomplete` carries the warning the chart shows, so a row
+ * that understates the day cannot be summed in a spreadsheet without notice.
+ */
+export function dailyTrendColumns(
+  metrics: Array<'claimed' | 'redeemed' | 'spend'> = [],
+): CsvColumn<DailyRedemptionPoint>[] {
+  const show = (m: 'claimed' | 'redeemed' | 'spend') =>
+    metrics.length === 0 || metrics.includes(m);
+
+  return [
+    { header: 'date', value: (r) => r.date },
+    ...(show('claimed')
+      ? [{ header: 'coupons_claimed', value: (r: DailyRedemptionPoint) => r.claimed }]
+      : []),
+    ...(show('redeemed')
+      ? [{ header: 'coupons_redeemed', value: (r: DailyRedemptionPoint) => r.redeemed }]
+      : []),
+    ...(show('spend')
+      ? [{ header: 'coupon_spend (IDR)', value: (r: DailyRedemptionPoint) => r.spend }]
+      : []),
+    { header: 'data_incomplete', value: (r) => r.incomplete },
+  ];
+}
 
 export const boxColumns: CsvColumn<BoxSummary>[] = [
   { header: 'box_id', value: (r) => r.boxId },

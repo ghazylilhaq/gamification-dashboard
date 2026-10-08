@@ -3,11 +3,11 @@ import { csvCell, toCsv, csvFileName } from '@/lib/csv/export';
 import { exportName } from '@/lib/csv/exportContext';
 import {
   rewardColumns, couponColumns, cashbackColumns, budgetTypeColumns, boxColumns, gachaColumns,
-  dailyBudgetColumns,
+  dailyBudgetColumns, dailyTrendColumns,
 } from '@/lib/csv/columns';
 import { buildDataset } from '@/lib/metrics/dataset';
 import { rewardRows, sortByStockLeft } from '@/lib/metrics/rewards';
-import { couponTable } from '@/lib/metrics/redemption';
+import { couponTable, dailyRedemptionSeries } from '@/lib/metrics/redemption';
 import { cashbackTable, budgetByType, dailyBudgetSeries } from '@/lib/metrics/budget';
 import { boxSummaries } from '@/lib/metrics/boxes';
 import { gachaSeries } from '@/lib/metrics/gacha';
@@ -170,5 +170,35 @@ describe('the exported tables', () => {
       // Every row must parse back to the same column count as the header.
       expect(parseRow(line)).toHaveLength(rewardColumns.length);
     }
+  });
+});
+
+describe('daily trend export', () => {
+  it('writes one row per date, with the incompleteness flag', () => {
+    const rows = dailyRedemptionSeries(ds());
+    const lines = toCsv(dailyTrendColumns(), rows).split('\r\n');
+    const header = parseRow(lines[0]!);
+
+    expect(header).toEqual([
+      'date', 'coupons_claimed', 'coupons_redeemed', 'coupon_spend (IDR)', 'data_incomplete',
+    ]);
+    expect(lines).toHaveLength(rows.length + 1);
+  });
+
+  it('narrows the columns to the selected metrics, and keeps the date and flag', () => {
+    const rows = dailyRedemptionSeries(ds());
+    const header = parseRow(toCsv(dailyTrendColumns(['spend']), rows).split('\r\n')[0]!);
+    expect(header).toEqual(['date', 'coupon_spend (IDR)', 'data_incomplete']);
+
+    // Column order follows the chart's, not the order the chips were clicked.
+    const both = parseRow(toCsv(dailyTrendColumns(['spend', 'claimed']), rows).split('\r\n')[0]!);
+    expect(both).toEqual(['date', 'coupons_claimed', 'coupon_spend (IDR)', 'data_incomplete']);
+  });
+
+  it('exports one box rather than the campaign when a box is picked', () => {
+    const all = dailyRedemptionSeries(ds());
+    const welcome = dailyRedemptionSeries(ds(), 13);
+    // Same dates either way — a box with no activity still has its days.
+    expect(welcome.map((r) => r.date)).toEqual(all.map((r) => r.date));
   });
 });

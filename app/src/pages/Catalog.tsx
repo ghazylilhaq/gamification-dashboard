@@ -22,7 +22,7 @@ import {
 } from '@/lib/metrics/redemption';
 import { formatDate, formatNumber, formatPercent, formatRupiah } from '@/lib/format';
 import { DownloadButton } from '@/components/DownloadButton';
-import { boxColumns, boxRewardColumns } from '@/lib/csv/columns';
+import { boxColumns, boxRewardColumns, dailyTrendColumns } from '@/lib/csv/columns';
 import { exportName } from '@/lib/csv/exportContext';
 import { csvFileName } from '@/lib/csv/export';
 import { useSearchHandoff } from '@/hooks/useSearchHandoff';
@@ -94,6 +94,26 @@ export function Catalog() {
           title="Daily trend"
           description={trendDescription(trendBoxId, trendMetrics, boxes)}
           freshness={freshnessText(raw.freshness, ['dailySpend'])}
+          action={
+            <DownloadButton
+              fileName={exportName('daily-trend', filter, [
+                trendBoxId === null
+                  ? 'all-boxes'
+                  : boxes.find((b) => b.boxId === trendBoxId)?.name,
+                trendMetrics.length === 0 ? null : trendMetrics.join('-'),
+              ])}
+              columns={dailyTrendColumns(trendMetrics)}
+              // The daily export carries no coupon figures at all in this
+              // state, so there is nothing to write — a file of zeros would
+              // read as "nothing happened" exactly as a chart of zeros would.
+              rows={trend?.availability === 'empty' ? [] : trend?.daily ?? []}
+              title={
+                trend?.availability === 'empty'
+                  ? 'Nothing to export — the daily export has no coupon data yet'
+                  : undefined
+              }
+            />
+          }
         />
 
         <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:gap-8">
